@@ -21,23 +21,21 @@ const Navbar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
 
-  // States
   const [mounted, setMounted] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  // ১. ড্রপডাউন ক্লোজ করার রিফ (Concept from FundOra)
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Better Auth সেশন
   const { data: session } = authClient.useSession();
   const user = session?.user;
   const isLoggedIn = !!user;
 
-  // হাইড্রেশন ফিক্স
+  // ১. ডাইনামিক ড্যাশবোর্ড পাথ (রোল অনুযায়ী)
+  const dashboardPath =
+    user?.role === 'admin' ? '/dashboard/admin' : '/dashboard/user';
+
   useEffect(() => setMounted(true), []);
 
-  // ২. উইন্ডোর যেকোনো জায়গায় ক্লিক করলে ড্রপডাউন বন্ধ হবে (Concept from FundOra)
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (
@@ -54,7 +52,7 @@ const Navbar: React.FC = () => {
 
   if (!mounted) return null;
 
-  // ৩. রোল অনুযায়ী লিঙ্ক ফিল্টার (Stage 4 requirement)
+  // ৩. নেভিগেশন লিঙ্ক ফিল্টার
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Explore Gadgets', path: '/explore' },
@@ -62,13 +60,13 @@ const Navbar: React.FC = () => {
 
   if (user?.role === 'admin') {
     navLinks.push(
-      { name: 'Manage Products', path: '/admin/products' },
-      { name: 'Manage Users', path: '/admin/users' },
+      { name: 'Manage Products', path: '/dashboard/admin/manage-products' }, // আপনার পাথ অনুযায়ী আপডেট করতে পারেন
+      { name: 'Manage Users', path: '/dashboard/admin/manage-users' },
     );
   } else if (user?.role === 'user') {
     navLinks.push(
-      { name: 'Add Product', path: '/product/add' },
-      { name: 'My Favorites', path: '/my-favorites' },
+      { name: 'Add Product', path: '/dashboard/user/add-product' },
+      { name: 'My Favorites', path: '/dashboard/user/my-favorites' },
     );
   }
   navLinks.push({ name: 'About', path: '/about' });
@@ -92,27 +90,21 @@ const Navbar: React.FC = () => {
     <>
       <nav className="sticky top-0 z-50 w-full bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-all duration-300">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-          {/* লোগো */}
           <Link
             href="/"
-            className="flex items-center space-x-1 group cursor-pointer"
+            className="flex items-center space-x-1 group cursor-pointer shrink-0"
           >
             <span className="text-2xl md:text-3xl font-black text-blue-700 dark:text-blue-500 tracking-tighter">
               ReuseHub
             </span>
           </Link>
 
-          {/* ডেস্কটপ মেনু */}
           <div className="hidden lg:flex items-center space-x-8">
             {navLinks.map(link => (
               <Link
                 key={link.path}
                 href={link.path}
-                className={`text-sm font-bold tracking-tight transition-all relative pb-1 group cursor-pointer hover:text-blue-700 dark:hover:text-blue-400 ${
-                  pathname === link.path
-                    ? 'text-blue-700 dark:text-blue-400'
-                    : 'text-slate-600 dark:text-slate-400'
-                }`}
+                className={`text-sm font-bold transition-all relative pb-1 group cursor-pointer hover:text-blue-700 dark:hover:text-blue-400 ${pathname === link.path ? 'text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}
               >
                 {link.name}
                 {pathname === link.path && (
@@ -126,16 +118,14 @@ const Navbar: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* থিম টগল */}
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/50 text-blue-700 dark:text-blue-400 border border-slate-200 dark:border-slate-700 cursor-pointer transition-all active:scale-90"
+              className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/50 text-blue-700 dark:text-blue-400 border border-slate-200 dark:border-slate-700 cursor-pointer active:scale-90"
             >
               {theme === 'dark' ? <FaSun size={18} /> : <FaMoon size={18} />}
             </button>
 
             {isLoggedIn ? (
-              /* ৪. প্রোফাইল ড্রপডাউন (Concept from FundOra) */
               <div className="relative hidden md:block" ref={dropdownRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -164,7 +154,7 @@ const Navbar: React.FC = () => {
                       initial={{ opacity: 0, y: 15, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                      className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] shadow-2xl z-50 overflow-hidden py-2"
+                      className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] shadow-2xl z-50 overflow-hidden py-2"
                     >
                       <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 border-b border-slate-100 dark:border-slate-800">
                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">
@@ -178,8 +168,9 @@ const Navbar: React.FC = () => {
                         </p>
                       </div>
                       <div className="p-2">
+                        {/* ৪. এখানে ডাইনামিক পাথ ব্যবহার করা হয়েছে */}
                         <Link
-                          href="/dashboard"
+                          href={dashboardPath}
                           onClick={() => setIsProfileOpen(false)}
                           className="flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:text-blue-700 transition-all"
                         >
@@ -207,7 +198,6 @@ const Navbar: React.FC = () => {
               </div>
             )}
 
-            {/* মোবাইল মেনু বাটন */}
             <button
               onClick={() => setIsMobileOpen(true)}
               className="lg:hidden p-2 text-slate-600 dark:text-slate-300 cursor-pointer"
@@ -218,7 +208,6 @@ const Navbar: React.FC = () => {
         </div>
       </nav>
 
-      {/* ৫. মোবাইল স্লাইড-ইন ড্রয়ার (Concept from FundOra) */}
       <AnimatePresence>
         {isMobileOpen && (
           <>
@@ -248,7 +237,6 @@ const Navbar: React.FC = () => {
                 </button>
               </div>
 
-              {/* মোবাইল ইউজার কার্ড */}
               {isLoggedIn && (
                 <div className="flex items-center gap-4 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl mb-8 border border-slate-100 dark:border-slate-800">
                   {user.image ? (
@@ -262,7 +250,7 @@ const Navbar: React.FC = () => {
                       {getInitials(user.name!)}
                     </div>
                   )}
-                  <div className="overflow-hidden">
+                  <div className="overflow-hidden text-ellipsis">
                     <p className="font-bold text-slate-900 dark:text-white truncate">
                       {user.name}
                     </p>
@@ -288,12 +276,22 @@ const Navbar: React.FC = () => {
 
               <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
                 {isLoggedIn ? (
-                  <button
-                    onClick={handleLogout}
-                    className="w-full py-4 bg-red-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest cursor-pointer shadow-lg shadow-red-500/20"
-                  >
-                    Logout Session
-                  </button>
+                  <div className="space-y-3">
+                    {/* ৫. মোবাইল ড্রয়ারেও ডাইনামিক ড্যাশবোর্ড পাথ */}
+                    <Link
+                      href={dashboardPath}
+                      onClick={() => setIsMobileOpen(false)}
+                      className="w-full flex justify-center py-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl font-black uppercase text-xs"
+                    >
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full py-4 bg-red-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest cursor-pointer shadow-lg shadow-red-500/20"
+                    >
+                      Logout Session
+                    </button>
+                  </div>
                 ) : (
                   <Link
                     href="/login"
