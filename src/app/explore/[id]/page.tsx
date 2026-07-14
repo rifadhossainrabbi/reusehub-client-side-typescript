@@ -19,6 +19,8 @@ import {
   Smartphone,
   Watch,
   Headphones,
+  Loader2,
+  ShoppingCart,
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,36 +33,40 @@ const ProductDetailsById = () => {
   const router = useRouter();
   const { data: session } = authClient.useSession();
 
-  // Data States
+  // --- COMPONENT STATES ---
   const [product, setProduct] = useState<any>(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImg, setSelectedImg] = useState('');
-
-  // Real-time UI States
+  const [isOrdering, setIsOrdering] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favCount, setFavCount] = useState(0);
 
-  // Initial Data Fetching
+  // Derived state to check if current user is the owner
+  const isOwner = session?.user?.id === product?.seller?.id;
+
+  /**
+   * Fetch all necessary data: Product Details, Related Items, and Favorite Status
+   */
   useEffect(() => {
-    const fetchArtifactData = async () => {
+    const fetchArchiveData = async () => {
       try {
         setLoading(true);
-        // 1. Fetch Main Product Details
+        // 1. Get Main Product Data
         const res = await fetch(`http://localhost:5000/api/products/${id}`);
         const data = await res.json();
         setProduct(data);
         setSelectedImg(data.imageUrl);
-        setFavCount(data.favoriteCount || 0); // Initialize from DB
+        setFavCount(data.favoriteCount || 0);
 
-        // 2. Fetch Related Items from the same category
+        // 2. Get Related Items based on Category
         const relRes = await fetch(
           `http://localhost:5000/api/products/related/${data.category}`,
         );
         const relData = await relRes.json();
         setRelated(relData.filter((p: any) => p._id !== id));
 
-        // 3. Check current user favorite status
+        // 3. Check if current user already favorited this artifact
         if (session?.user) {
           const favRes = await fetch(
             `http://localhost:5000/api/favorites/check?userId=${session.user.id}&productId=${id}`,
@@ -69,20 +75,20 @@ const ProductDetailsById = () => {
           setIsFavorited(favData.isFavorited);
         }
       } catch (err) {
-        toast.error('Failed to retrieve artifact data');
+        toast.error('Protocol failure: Could not retrieve artifact');
       } finally {
         setLoading(false);
       }
     };
-    if (id) fetchArtifactData();
+    if (id) fetchArchiveData();
   }, [id, session]);
 
   /**
-   * Toggles Favorite state in DB and syncs count locally
+   * Toggle favorite status and sync counter in real-time
    */
   const handleToggleFavorite = async () => {
     if (!session?.user)
-      return toast.error('Identification required to preserve artifact!');
+      return toast.error('Identification required to save artifacts!');
 
     try {
       const res = await fetch(`http://localhost:5000/api/favorites/toggle`, {
@@ -101,30 +107,72 @@ const ProductDetailsById = () => {
 
       if (res.ok) {
         setIsFavorited(data.isFavorited);
-        // Syncing counter: 5 to 6 or 6 to 5
+        // Atomic update of the UI counter (5 to 6 or 6 to 5)
         setFavCount(prev =>
           data.isFavorited ? prev + 1 : Math.max(0, prev - 1),
         );
         toast.success(data.message);
       }
     } catch (err) {
-      toast.error('Sync to archives failed');
+      toast.error('Wishlist synchronization failed');
+    }
+  };
+
+  /**
+   * Send buy request to the owner (creates record in orders collection)
+   */
+  const handleBuyRequest = async () => {
+    if (!session?.user)
+      return toast.error('Identification required to purchase!');
+    if (isOwner) return toast.error('Self-acquisition is forbidden!');
+
+    setIsOrdering(true);
+    const orderData = {
+      productId: product._id,
+      title: product.title,
+      price: product.price,
+      imageUrl: product.imageUrl,
+      sellerId: product.seller.id,
+      buyerId: session.user.id,
+      buyerName: session.user.name,
+      buyerEmail: session.user.email,
+    };
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success('Request sent to seller successfully!');
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error('Transmission failed');
+    } finally {
+      setIsOrdering(false);
     }
   };
 
   if (loading)
     return (
-      <div className="h-screen flex items-center justify-center font-black uppercase tracking-[0.4em] animate-pulse text-blue-600">
-        Accessing Artifact...
+      <div className="h-screen flex flex-col items-center justify-center space-y-4 bg-white dark:bg-slate-950">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+        <p className="font-black uppercase tracking-[0.5em] text-blue-600 animate-pulse">
+          Syncing Artifact...
+        </p>
       </div>
     );
 
   return (
     <div className="bg-white dark:bg-[#020617] transition-colors duration-500 min-h-screen">
       <Toaster position="top-right" />
-
       <div className="max-w-[1440px] mx-auto px-4 md:px-10 py-10 space-y-16">
-        {/* Navigation */}
+        {/* Navigation Breadcrumbs */}
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           <Link href="/" className="hover:text-blue-600 transition-colors">
             Home
@@ -134,14 +182,14 @@ const ProductDetailsById = () => {
             href="/explore"
             className="hover:text-blue-600 transition-colors mx-2"
           >
-            Explore
+            Archives
           </Link>{' '}
           /<span className="text-blue-600 truncate">{product.title}</span>
         </div>
 
-        {/* --- SECTION 1: VISUALS & PURCHASE --- */}
+        {/* --- SECTION 1: HERO VIEW (Visuals & Sidebar) --- */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          {/* Main Visual Gallery (Removed Rotation/Video) */}
+          {/* Main Visual Box (Rotation/Video buttons removed) */}
           <div className="lg:col-span-7 space-y-8">
             <div className="aspect-[4/3] bg-slate-50 dark:bg-slate-900 rounded-[3rem] overflow-hidden border border-slate-100 dark:border-slate-800 relative shadow-sm group">
               <motion.img
@@ -159,7 +207,7 @@ const ProductDetailsById = () => {
                 <button
                   key={i}
                   onClick={() => setSelectedImg(product.imageUrl)}
-                  className={`w-24 h-24 rounded-3xl border-2 shrink-0 transition-all ${selectedImg === product.imageUrl ? 'border-blue-600 shadow-lg' : 'border-slate-100 dark:border-slate-800 opacity-60'}`}
+                  className={`w-24 h-24 rounded-3xl border-2 shrink-0 transition-all ${selectedImg === product.imageUrl ? 'border-blue-600 shadow-xl' : 'border-slate-100 dark:border-slate-800 opacity-60'}`}
                 >
                   <img
                     src={product.imageUrl}
@@ -171,21 +219,19 @@ const ProductDetailsById = () => {
             </div>
           </div>
 
-          {/* Pricing Sidebar */}
-          <div className="lg:col-span-5 space-y-8">
-            <div className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
+          {/* Pricing & Interaction Sidebar */}
+          <div className="lg:col-span-5 space-y-10 sticky top-28">
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
               <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">
-                    Mint Condition
-                  </span>
-                </div>
+                <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">
+                  Sanctuary Pick
+                </span>
                 <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-2">
                   <Heart
                     size={14}
                     className={isFavorited ? 'text-red-500 fill-red-500' : ''}
                   />{' '}
-                  {favCount} Interested
+                  {favCount} Potential Seekers
                 </span>
               </div>
 
@@ -207,10 +253,27 @@ const ProductDetailsById = () => {
                 </span>
               </div>
 
+              {/* --- BUY BUTTON LOGIC --- */}
               <div className="flex gap-4">
-                <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all cursor-pointer">
-                  Acquire Artifact
-                </button>
+                {isOwner ? (
+                  <div className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 py-5 rounded-2xl font-black uppercase text-xs tracking-widest text-center border dark:border-slate-700 opacity-80">
+                    This is your listing
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleBuyRequest}
+                    disabled={isOrdering}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isOrdering ? (
+                      <Loader2 className="animate-spin" size={18} />
+                    ) : (
+                      <ShoppingCart size={18} />
+                    )}
+                    {isOrdering ? 'Sending...' : 'Buy Artifact'}
+                  </button>
+                )}
+
                 <button
                   onClick={handleToggleFavorite}
                   className={`p-5 rounded-2xl transition-all border shadow-sm cursor-pointer ${isFavorited ? 'bg-red-50 dark:bg-red-900/20 text-red-500 border-red-100 dark:border-red-900/50 scale-110' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-red-500 border-transparent'}`}
@@ -223,48 +286,45 @@ const ProductDetailsById = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-2 pt-4 border-t dark:border-slate-800">
-                <SidebarAction
-                  icon={<ExternalLink size={14} />}
-                  label="Compare"
-                />
-                <SidebarAction icon={<Share2 size={14} />} label="Share" />
-                <SidebarAction
+                <MiniAction icon={<ExternalLink size={14} />} label="Compare" />
+                <MiniAction icon={<Share2 size={14} />} label="Share" />
+                <MiniAction
                   icon={<MessageCircle size={14} />}
                   label="Merchant"
                 />
               </div>
             </div>
 
-            {/* Merchant Display */}
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-xl">
+            {/* Merchant Card */}
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-600 flex items-center justify-center text-blue-600 dark:text-white font-black text-xl">
                   TR
                 </div>
                 <div>
-                  <p className="font-black text-slate-900 dark:text-white text-sm uppercase">
+                  <p className="font-black text-slate-900 dark:text-white text-base">
                     TECHREVIVE CO. ✓
                   </p>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    Verified Premium Seller
+                    Premium Merchant
                   </p>
                 </div>
               </div>
-              <button className="px-5 py-2.5 bg-white dark:bg-slate-800 border dark:border-slate-700 text-blue-600 rounded-xl text-[10px] font-black uppercase">
-                Message
+              <button className="p-3 bg-white dark:bg-slate-800 text-blue-600 rounded-2xl shadow-sm hover:scale-110 transition-transform">
+                <MessageCircle size={20} />
               </button>
             </div>
           </div>
         </div>
 
-        {/* --- SECTION 2: SPECIFICATIONS --- */}
+        {/* --- SECTION 2: DESCRIPTION & SPECS --- */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
           <div className="lg:col-span-8 space-y-12">
             <section className="space-y-6">
               <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                 Artifact Overview
               </h2>
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium text-lg italic bg-slate-50 dark:bg-slate-900/50 p-8 rounded-[2.5rem] border dark:border-slate-800">
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium text-lg italic bg-slate-50 dark:bg-slate-900/50 p-10 rounded-[3rem] border dark:border-slate-800">
                 "{product.fullDescription}"
               </p>
             </section>
@@ -279,38 +339,38 @@ const ProductDetailsById = () => {
                   value={`#${id?.slice(-8).toUpperCase()}`}
                 />
                 <SpecRow label="Architecture" value={product.category} />
-                <SpecRow label="Condition" value="Certified Pre-owned" />
-                <SpecRow
-                  label="Seller"
-                  value={product.seller?.name || 'Premium Merchant'}
-                />
+                <SpecRow label="Deployment" value="Late 2023" />
+                <SpecRow label="Security" value="Escrow Secured" />
               </div>
             </section>
           </div>
 
-          <aside className="lg:col-span-4 space-y-6">
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
-              <h4 className="font-black uppercase text-xs tracking-widest mb-6 opacity-60">
+          <aside className="lg:col-span-4 space-y-8">
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800">
+              <h4 className="font-black uppercase text-xs tracking-widest mb-10 opacity-50">
                 Seeker Shield
               </h4>
-              <ul className="space-y-6">
-                <FAQItem
-                  title="Secure Portal"
-                  desc="Every transaction is encrypted and verified."
-                />
-                <FAQItem
-                  title="Inspected Artifacts"
-                  desc="Undergoes rigorous tech health checks."
-                />
-              </ul>
+              <div className="space-y-6">
+                <FAQRow q="Sanctuary Inspection?" />
+                <FAQRow q="Artifact Lineage?" />
+              </div>
             </div>
-            <div className="bg-blue-600 p-8 rounded-[2.5rem] text-white space-y-4 shadow-xl">
-              <ShieldCheck size={40} className="opacity-30" />
-              <h4 className="text-xl font-black uppercase">Buyer Protection</h4>
-              <p className="text-xs font-bold opacity-80 leading-relaxed">
-                Full repatriation of funds if the artifact doesn't match
-                sanctuary logs.
-              </p>
+            <div className="bg-gradient-to-br from-indigo-700 to-blue-800 p-10 rounded-[3rem] text-white space-y-6 shadow-2xl relative overflow-hidden">
+              <ShieldCheck
+                size={40}
+                className="opacity-30 absolute -top-2 -right-2 scale-150 rotate-12"
+              />
+              <h4 className="text-2xl font-black uppercase flex items-center gap-3">
+                <Award size={24} /> Shield Active
+              </h4>
+              <ul className="space-y-5 text-sm font-bold opacity-80">
+                <li className="flex items-center gap-3">
+                  <Check size={16} /> 100% Repatriation Guarantee.
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check size={16} /> Full Tracking for Artifacts.
+                </li>
+              </ul>
             </div>
           </aside>
         </div>
@@ -332,7 +392,7 @@ const ProductDetailsById = () => {
 };
 
 // --- Local Mini UI Components ---
-const SidebarAction = ({ icon, label }: any) => (
+const MiniAction = ({ icon, label }: any) => (
   <button className="flex flex-col items-center gap-2 text-[9px] font-black uppercase text-slate-400 hover:text-blue-600 transition-all cursor-pointer group">
     <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl group-hover:bg-blue-50 transition-all">
       {icon}
@@ -342,7 +402,7 @@ const SidebarAction = ({ icon, label }: any) => (
 );
 
 const SpecRow = ({ label, value }: any) => (
-  <div className="flex justify-between items-center p-8 border-b border-slate-50 dark:border-slate-800 last:border-none">
+  <div className="flex justify-between items-center p-8 border-b border-slate-50 dark:border-slate-800 last:border-none hover:bg-slate-50/30 transition-colors">
     <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">
       {label}
     </span>
@@ -352,14 +412,12 @@ const SpecRow = ({ label, value }: any) => (
   </div>
 );
 
-const FAQItem = ({ title, desc }: any) => (
-  <div className="space-y-1">
-    <p className="text-sm font-black text-slate-900 dark:text-white uppercase">
-      {title}
-    </p>
-    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-      {desc}
-    </p>
+const FAQRow = ({ q }: any) => (
+  <div className="flex justify-between items-center pb-6 border-b dark:border-slate-800 last:border-none cursor-pointer group">
+    <span className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 group-hover:text-blue-600 transition-all">
+      {q}
+    </span>
+    <ChevronDown size={14} className="text-slate-400" />
   </div>
 );
 

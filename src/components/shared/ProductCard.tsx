@@ -86,7 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ item }) => {
         {/* 4. Full Width View Details Button (Fixed at Bottom) */}
         <Link href={`/explore/${item._id}`} className="block pt-2">
           <button className="w-full py-3.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-700 hover:text-white transition-all duration-300 cursor-pointer active:scale-95">
-            View Artifact Details
+            View Product Details
           </button>
         </Link>
       </div>
