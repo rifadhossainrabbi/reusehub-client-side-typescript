@@ -12,8 +12,7 @@ import {
   Users,
   Box,
   LogOut,
-  HelpCircle,
-  ChevronDown,
+  HeartIcon,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 
@@ -34,6 +33,11 @@ const DashboardSidebar = () => {
       name: 'Add Product',
       path: '/dashboard/user/add-product',
       icon: PlusCircle,
+    },
+    {
+      name: 'My favorites',
+      path: '/dashboard/user/my-favorites',
+      icon: HeartIcon,
     },
     { name: 'My Listings', path: '/dashboard/user/my-list', icon: List },
     { name: 'My Orders', path: '/dashboard/user/my-orders', icon: ShoppingBag },

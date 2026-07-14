@@ -149,9 +149,10 @@ const MyProductList = () => {
                     >
                       <Eye size={18} />
                     </Link>
+
                     <Link
-                      href={`/dashboard/user/edit-product/${product._id}`}
-                      className="flex-1 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex items-center justify-center hover:bg-blue-50 transition-all"
+                      href={`/dashboard/user/my-list/${product._id}`} 
+                      className="flex-1 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex items-center justify-center hover:bg-blue-50 transition-all cursor-pointer"
                     >
                       <Edit3 size={18} />
                     </Link>
