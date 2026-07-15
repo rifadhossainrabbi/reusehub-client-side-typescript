@@ -20,18 +20,27 @@ interface IProductForm {
   category: string;
   shortDescription: string;
   fullDescription: string;
-  image: FileList; // এটি একটি অবজেক্ট যা সরাসরি ব্যাকেন্ডে পাঠানো যাবে না
+  image: FileList;
 }
 
 const EditProductPage = () => {
   const { id } = useParams();
   const router = useRouter();
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<IProductForm>();
+  } = useForm<IProductForm>({
+    defaultValues: {
+      title: '',
+      price: '',
+      category: 'Smartphone',
+      shortDescription: '',
+      fullDescription: '',
+    },
+  });
 
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -49,14 +58,16 @@ const EditProductPage = () => {
 
         if (res.ok) {
           reset({
-            title: data.title,
-            price: data.price.toString(),
-            category: data.category,
-            shortDescription: data.shortDescription,
-            fullDescription: data.fullDescription,
+            title: data.title || '',
+            price: data.price?.toString() || '',
+            category: data.category || 'Smartphone',
+            shortDescription: data.shortDescription || '',
+            fullDescription: data.fullDescription || '',
           });
           setExistingImageUrl(data.imageUrl);
           setPreviewImage(data.imageUrl);
+        } else {
+          toast.error('Failed to fetch product');
         }
       } catch (err) {
         toast.error('Protocol error: Artifact logs unreachable');
@@ -69,64 +80,84 @@ const EditProductPage = () => {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setPreviewImage(URL.createObjectURL(file));
+    if (file) {
+      setPreviewImage(URL.createObjectURL(file));
+    }
   };
 
- const onSubmit = async (formData: IProductForm) => {
-   setIsUpdating(true);
-   const loadingToast = toast.loading('Synchronizing updates to sanctuary...');
+  const onSubmit = async (formData: IProductForm) => {
+    console.log('✅ Form Data:', formData);
+    console.log('✅ Price from form:', formData.price);
+    console.log('✅ Price type:', typeof formData.price);
 
-   try {
-     let finalImageUrl = existingImageUrl;
+    setIsUpdating(true);
+    const loadingToast = toast.loading('Synchronizing updates to sanctuary...');
 
-     // ১. নতুন ইমেজ আপলোড করার লজিক
-     if (formData.image && formData.image.length > 0) {
-       const uploadData = new FormData();
-       uploadData.append('image', formData.image[0]);
+    try {
+      let finalImageUrl = existingImageUrl;
 
-       const imgRes = await fetch(
-         `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
-         {
-           method: 'POST',
-           body: uploadData,
-         },
-       );
-       const imgData = await imgRes.json();
-       if (imgData.success) finalImageUrl = imgData.data.url;
-     }
+      // ১. নতুন ইমেজ আপলোড
+      if (formData.image && formData.image.length > 0) {
+        const uploadData = new FormData();
+        uploadData.append('image', formData.image[0]);
 
-     // ২. ডাটা ক্লিন করা (image FileList এবং কোনো লুকানো _id বাদ দেওয়া)
-     const { image, ...rest } = formData;
+        const imgRes = await fetch(
+          `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
+          {
+            method: 'POST',
+            body: uploadData,
+          },
+        );
+        const imgData = await imgRes.json();
+        if (imgData.success) {
+          finalImageUrl = imgData.data.url;
+        }
+      }
 
-     const updatedPayload = {
-       ...rest,
-       price: parseFloat(formData.price),
-       imageUrl: finalImageUrl,
-     };
+      // ২. ডাটা প্রস্তুত করা
+      const { image, ...rest } = formData;
 
-     // ৩. ব্যাকেন্ডে প্যাচ রিকোয়েস্ট পাঠানো
-     const res = await fetch(`${API_URL}/api/products/${id}`, {
-       method: 'PATCH',
-       headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify(updatedPayload),
-     });
+      // ✅ সমাধান: সরাসরি number এ কনভার্ট করুন, কোনো রাউন্ডিং বা ফ্লোটিং ইস্যু নেই
+      const priceNumber = Number(formData.price);
 
-     const result = await res.json();
+      // চেক করুন NaN কিনা
+      if (isNaN(priceNumber)) {
+        throw new Error('Invalid price format');
+      }
 
-     if (res.ok && result.success) {
-       toast.success('Artifact successfully updated!', { id: loadingToast });
-       // আপডেট হওয়ার পর ১.৫ সেকেন্ড সময় নিয়ে রিডাইরেক্ট
-       setTimeout(() => router.push('/dashboard/user/my-list'), 1500);
-     } else {
-       throw new Error(result.message || 'Update protocol failed');
-     }
-   } catch (error: any) {
-     console.error('Update Catch:', error);
-     toast.error(error.message, { id: loadingToast });
-   } finally {
-     setIsUpdating(false);
-   }
- };
+      console.log('✅ Converted Price:', priceNumber);
+      console.log('✅ Price type after conversion:', typeof priceNumber);
+
+      const updatedPayload = {
+        ...rest,
+        price: priceNumber, // number এ পাঠান
+        imageUrl: finalImageUrl,
+      };
+
+      console.log('📤 Sending to backend:', updatedPayload);
+
+      // ৩. ব্যাকেন্ডে প্যাচ রিকোয়েস্ট
+      const res = await fetch(`${API_URL}/api/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedPayload),
+      });
+
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        toast.success('Artifact successfully updated!', { id: loadingToast });
+        setTimeout(() => router.push('/dashboard/user/my-list'), 1500);
+      } else {
+        throw new Error(result.message || 'Update protocol failed');
+      }
+    } catch (error: any) {
+      console.error('Update Error:', error);
+      toast.error(error.message || 'Update failed', { id: loadingToast });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   if (loading)
     return (
@@ -163,7 +194,11 @@ const EditProductPage = () => {
                 Update Visual Artifact
               </label>
               <div
-                className={`relative h-64 border-2 border-dashed rounded-[2rem] transition-all flex flex-col items-center justify-center overflow-hidden ${previewImage ? 'border-blue-500 bg-slate-50 dark:bg-slate-950' : 'border-slate-200 dark:border-slate-800'}`}
+                className={`relative h-64 border-2 border-dashed rounded-[2rem] transition-all flex flex-col items-center justify-center overflow-hidden ${
+                  previewImage
+                    ? 'border-blue-500 bg-slate-50 dark:bg-slate-950'
+                    : 'border-slate-200 dark:border-slate-800'
+                }`}
               >
                 {previewImage ? (
                   <div className="relative w-full h-full group">
@@ -204,14 +239,34 @@ const EditProductPage = () => {
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputField
-                label="Adjusted Price ($)"
-                name="price"
-                type="number"
-                register={register}
-                required
-                errors={errors}
-              />
+              {/* ✅ Price ফিল্ড - type="text" ব্যবহার করুন */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-400 tracking-widest ml-1">
+                  Adjusted Price ($)
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Enter price"
+                  {...register('price', {
+                    required: 'Price is required',
+                    validate: value => {
+                      const num = Number(value);
+                      if (isNaN(num)) return 'Please enter a valid number';
+                      if (num <= 0) return 'Price must be greater than 0';
+                      return true;
+                    },
+                  })}
+                  className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none transition-all"
+                />
+                {errors.price && (
+                  <p className="text-red-600 text-[10px] font-black uppercase mt-1 ml-1">
+                    {errors.price.message}
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-400 tracking-widest ml-1">
                   Archive Category
@@ -250,6 +305,7 @@ const EditProductPage = () => {
             </div>
 
             <button
+              type="submit"
               disabled={isUpdating}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-3"
             >

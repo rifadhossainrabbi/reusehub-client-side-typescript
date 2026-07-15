@@ -14,7 +14,7 @@ const ReceivedOrders = () => {
       if (!session?.user?.id) return;
       try {
         const res = await fetch(
-          `http://localhost:5000/api/orders/received/${session.user.id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/orders/received/${session.user.id}`,
         );
         const data = await res.json();
         setOrders(data);

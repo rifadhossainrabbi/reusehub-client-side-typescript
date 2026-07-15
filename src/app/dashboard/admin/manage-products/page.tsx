@@ -36,7 +36,7 @@ const ManageProducts = () => {
     try {
       setLoading(true);
       const res = await fetch(
-        `http://localhost:5000/api/admin/products?page=${pageNum}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products?page=${pageNum}`,
       );
       const data = await res.json();
       setProducts(data.products || []);
@@ -59,7 +59,7 @@ const ManageProducts = () => {
     const endpoint = action === 'approve' ? `approve/${id}` : `feature/${id}`;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/products/${endpoint}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${endpoint}`,
         { method: 'PATCH' },
       );
       const data = await res.json();
@@ -81,7 +81,7 @@ const ManageProducts = () => {
     if (!productToPurge) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/products/${productToPurge._id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${productToPurge._id}`,
         { method: 'DELETE' },
       );
       if (res.ok) {

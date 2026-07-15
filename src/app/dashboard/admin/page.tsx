@@ -44,7 +44,7 @@ const AdminDashboardHomePage = () => {
     const fetchAdminData = async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/admin/dashboard-stats`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/admin/dashboard-stats`,
         );
         if (!res.ok) {
           const errBody = await res.json().catch(() => null);

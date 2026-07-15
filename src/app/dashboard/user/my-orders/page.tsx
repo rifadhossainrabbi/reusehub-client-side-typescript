@@ -29,7 +29,7 @@ const MyOrderPage = () => {
     if (!session?.user?.id) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/orders/my-orders/${session.user.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/orders/my-orders/${session.user.id}`,
       );
       const data = await res.json();
       setOrders(data);
@@ -55,7 +55,7 @@ const MyOrderPage = () => {
     if (!selectedOrder) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/orders/${selectedOrder._id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/orders/${selectedOrder._id}`,
         {
           method: 'DELETE',
         },

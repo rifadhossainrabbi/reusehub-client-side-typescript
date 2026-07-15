@@ -28,6 +28,7 @@ const Navbar: React.FC = () => {
 
   const { data: session } = authClient.useSession();
   const user = session?.user;
+  console.log(user, 'user');
   const isLoggedIn = !!user;
 
   // ১. ডাইনামিক ড্যাশবোর্ড পাথ (রোল অনুযায়ী)
@@ -133,7 +134,7 @@ const Navbar: React.FC = () => {
                 >
                   {user.image ? (
                     <img
-                      src={user.image}
+                      src={user?.image}
                       alt="p"
                       className="w-9 h-9 rounded-full object-cover border-2 border-blue-500"
                     />

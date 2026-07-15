@@ -37,7 +37,7 @@ const ManageUsers = () => {
     try {
       setLoading(true);
       const res = await fetch(
-        `http://localhost:5000/api/admin/users?page=${pageNum}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users?page=${pageNum}`,
       );
       const data = await res.json();
       setUsers(data.users || []);
@@ -60,7 +60,7 @@ const ManageUsers = () => {
     if (!selectedUser) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/users/toggle-role/${selectedUser._id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/toggle-role/${selectedUser._id}`,
         {
           method: 'PATCH',
         },
@@ -83,7 +83,7 @@ const ManageUsers = () => {
     if (!selectedUser) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/users/${selectedUser._id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser._id}`,
         {
           method: 'DELETE',
         },

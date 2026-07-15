@@ -61,7 +61,7 @@ const ProductDetailsById = () => {
 
         // 2. Get Related Items based on Category
         const relRes = await fetch(
-          `http://localhost:5000/api/products/related/${data.category}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/products/related/${data.category}`,
         );
         const relData = await relRes.json();
         setRelated(relData.filter((p: any) => p._id !== id));
@@ -69,7 +69,7 @@ const ProductDetailsById = () => {
         // 3. Check if current user already favorited this artifact
         if (session?.user) {
           const favRes = await fetch(
-            `http://localhost:5000/api/favorites/check?userId=${session.user.id}&productId=${id}`,
+            `${process.env.NEXT_PUBLIC_API_URL}/api/favorites/check?userId=${session.user.id}&productId=${id}`,
           );
           const favData = await favRes.json();
           setIsFavorited(favData.isFavorited);

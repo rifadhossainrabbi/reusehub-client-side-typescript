@@ -37,13 +37,13 @@ const AdminProfilePage = () => {
       });
 
       // Fetch system overview stats
-      fetch(`http://localhost:5000/api/admin/users`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`)
         .then(res => res.json())
         .then(data =>
           setStats(prev => ({ ...prev, users: data.users?.length || 0 })),
         );
 
-      fetch(`http://localhost:5000/api/admin/products`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products`)
         .then(res => res.json())
         .then(data =>
           setStats(prev => ({ ...prev, products: data.totalItems || 0 })),
@@ -57,11 +57,14 @@ const AdminProfilePage = () => {
     const loadingToast = toast.loading('Syncing admin credentials...');
 
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${user?.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/${user?.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        },
+      );
       const data = await res.json();
 
       if (res.ok) {
