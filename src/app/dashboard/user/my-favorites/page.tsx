@@ -6,8 +6,9 @@ import {
   Eye,
   Heart,
   Loader2,
-  Package,
-  ArrowUpRight,
+  Calendar,
+  Tag,
+  DollarSign,
 } from 'lucide-react';
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
@@ -51,9 +52,7 @@ const MyFavoritePage = () => {
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/favorites/${selectedItem._id}`,
-        {
-          method: 'DELETE',
-        },
+        { method: 'DELETE' },
       );
       if (res.ok) {
         setFavorites(favorites.filter(fav => fav._id !== selectedItem._id));
@@ -67,19 +66,17 @@ const MyFavoritePage = () => {
 
   if (loading)
     return (
-      <div className="h-96 flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="animate-spin text-blue-600" size={40} />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+      <div className="h-screen flex flex-col items-center justify-center space-y-4 bg-white dark:bg-slate-950">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
           Syncing Wishlist...
         </p>
       </div>
     );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-10">
+    <div className="space-y-8 animate-in fade-in duration-700 pb-20 px-2 md:px-4">
       <Toaster position="top-right" />
-
-      {/* Confirmation Modal */}
       <FavDeleteModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -87,110 +84,160 @@ const MyFavoritePage = () => {
         itemName={selectedItem?.title || ''}
       />
 
-      <header className="border-b dark:border-slate-800 pb-8 px-2">
-        <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+      {/* Header Section */}
+      <header className="border-b dark:border-slate-800 pb-8">
+        <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
           Saved Artifacts
         </h1>
-        <p className="text-slate-500 font-medium mt-1">
-          Manage gadgets you have earmarked for future acquisition.
+        <p className="text-sm md:text-base text-slate-500 font-medium mt-2 italic">
+          Refining your earmarked sanctuary collection.
         </p>
       </header>
 
       {favorites.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 p-24 rounded-[3rem] text-center border border-dashed dark:border-slate-800 shadow-inner">
+        <div className="bg-white dark:bg-slate-900 p-16 md:p-24 rounded-[3rem] text-center border border-dashed dark:border-slate-800 shadow-inner">
           <Heart
             className="mx-auto text-slate-200 dark:text-slate-800 mb-6"
-            size={72}
+            size={64}
           />
           <h3 className="text-xl font-bold text-slate-400">
-            Your wishlist is empty.
+            Your wishlist is currently empty.
           </h3>
           <Link
             href="/explore"
-            className="mt-6 inline-block bg-blue-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all cursor-pointer shadow-lg"
+            className="mt-6 inline-block bg-blue-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all cursor-pointer"
           >
-            Discover Gear
+            Explore archives
           </Link>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] border-b dark:border-slate-800">
-                  <th className="px-8 py-6">Gadget Info</th>
-                  <th className="px-6 py-6 text-center">Category</th>
-                  <th className="px-6 py-6 text-center">Price</th>
-                  <th className="px-8 py-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y dark:divide-slate-800">
-                {favorites.map(fav => (
-                  <tr
-                    key={fav._id}
-                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
-                  >
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-5">
-                        <Link
-                          href={`/explore/${fav.productId}`}
-                          className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0 cursor-pointer ring-2 ring-transparent group-hover:ring-blue-500/20 transition-all"
-                        >
-                          <img
-                            src={fav.imageUrl}
-                            alt="p"
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                        </Link>
-                        <div>
+        <>
+          {/* --- 1. DESKTOP TABLE VIEW (Visible on LG screens and up) --- */}
+          <div className="hidden lg:block bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b dark:border-slate-800">
+                    <th className="px-8 py-6">Gadget Metadata</th>
+                    <th className="px-6 py-6 text-center">Category</th>
+                    <th className="px-6 py-6 text-center">Valuation</th>
+                    <th className="px-8 py-6 text-right">Moderation</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y dark:divide-slate-800">
+                  {favorites.map(fav => (
+                    <tr
+                      key={fav._id}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
+                    >
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-5">
                           <Link
                             href={`/explore/${fav.productId}`}
-                            className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter hover:text-blue-600 cursor-pointer transition-colors block mb-1"
+                            className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0 cursor-pointer border dark:border-slate-800"
                           >
-                            {fav.title}
+                            <img
+                              src={fav.imageUrl}
+                              alt="p"
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
                           </Link>
-                          <p className="text-[10px] font-bold text-slate-400">
-                            Added on{' '}
-                            {new Date(fav.addedAt).toLocaleDateString()}
-                          </p>
+                          <div>
+                            <Link
+                              href={`/explore/${fav.productId}`}
+                              className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter hover:text-blue-600 cursor-pointer transition-colors block mb-1"
+                            >
+                              {fav.title}
+                            </Link>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                              <Calendar size={10} />{' '}
+                              {new Date(fav.addedAt).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-6 text-center">
-                      <span className="inline-block px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30">
-                        {fav.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-6 text-center">
-                      <p className="text-lg font-black text-slate-900 dark:text-white">
+                      </td>
+                      <td className="px-6 py-6 text-center">
+                        <span className="inline-block px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30">
+                          {fav.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-6 text-center font-black text-slate-900 dark:text-white">
                         ${fav.price.toLocaleString()}
-                      </p>
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex justify-end gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
-                        <Link href={`/explore/${fav.productId}`}>
-                          <button
-                            className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-blue-600 hover:text-white transition-all cursor-pointer shadow-sm"
-                            title="View Details"
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                        <div className="flex justify-end gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <Link
+                            href={`/explore/${fav.productId}`}
+                            className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
                           >
                             <Eye size={18} />
+                          </Link>
+                          <button
+                            onClick={() => openDeleteModal(fav)}
+                            className="p-3 bg-slate-100 dark:bg-slate-800 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all cursor-pointer"
+                          >
+                            <Trash2 size={18} />
                           </button>
-                        </Link>
-                        <button
-                          onClick={() => openDeleteModal(fav)}
-                          className="p-3 bg-slate-100 dark:bg-slate-800 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all cursor-pointer shadow-sm"
-                          title="Remove from Wishlist"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* --- 2. MOBILE & TABLET CARD VIEW (Visible on screens below LG) --- */}
+          <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+            {favorites.map(fav => (
+              <div
+                key={fav._id}
+                className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6"
+              >
+                <div className="flex items-center gap-4">
+                  <Link
+                    href={`/explore/${fav.productId}`}
+                    className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0"
+                  >
+                    <img
+                      src={fav.imageUrl}
+                      alt="p"
+                      className="w-full h-full object-cover"
+                    />
+                  </Link>
+                  <div className="overflow-hidden">
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">
+                      {fav.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <span className="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase">
+                        {fav.category}
+                      </span>
+                      <span className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1">
+                        <DollarSign size={10} />
+                        {fav.price}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2 border-t dark:border-slate-800">
+                  <Link href={`/explore/${fav.productId}`} className="flex-1">
+                    <button className="w-full py-3 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                      <Eye size={14} /> View
+                    </button>
+                  </Link>
+                  <button
+                    onClick={() => openDeleteModal(fav)}
+                    className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={14} /> Purge
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authClient } from '@/lib/auth-client';
+import { Box, HeartIcon, LayoutDashboard, List, Package, PlusCircle, ShoppingBag, UserCircle, Users } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -28,10 +29,8 @@ const Navbar: React.FC = () => {
 
   const { data: session } = authClient.useSession();
   const user = session?.user;
-  console.log(user, 'user');
   const isLoggedIn = !!user;
 
-  // ১. ডাইনামিক ড্যাশবোর্ড পাথ (রোল অনুযায়ী)
   const dashboardPath =
     user?.role === 'admin' ? '/dashboard/admin' : '/dashboard/user';
 
@@ -53,21 +52,70 @@ const Navbar: React.FC = () => {
 
   if (!mounted) return null;
 
-  // ৩. নেভিগেশন লিঙ্ক ফিল্টার
+  // ১. ডাইনামিক লিঙ্ক জেনারেটর (মোবাইল ও ডেস্কটপ উভয়ের জন্য)
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Explore Gadgets', path: '/explore' },
   ];
 
+  const mobileNavlinks = [
+    { name: 'Home', path: '/' },
+    { name: 'Explore Gadgets', path: '/explore' },
+    { name: 'About', path: '/about' },
+  ];
+
   if (user?.role === 'admin') {
     navLinks.push(
-      { name: 'Manage Products', path: '/dashboard/admin/manage-products' }, // আপনার পাথ অনুযায়ী আপডেট করতে পারেন
+      { name: 'Manage Products', path: '/dashboard/admin/manage-products' },
       { name: 'Manage Users', path: '/dashboard/admin/manage-users' },
+    );
+    mobileNavlinks.push(
+      { name: 'Dashboard', path: '/dashboard/admin', icon: LayoutDashboard },
+      {
+        name: 'Manage Users',
+        path: '/dashboard/admin/manage-users',
+        icon: Users,
+      },
+      {
+        name: 'Manage Products',
+        path: '/dashboard/admin/manage-products',
+        icon: Box,
+      },
+      {
+        name: 'System Profile',
+        path: '/dashboard/admin/profile',
+        icon: UserCircle,
+      },
     );
   } else if (user?.role === 'user') {
     navLinks.push(
       { name: 'Add Product', path: '/dashboard/user/add-product' },
       { name: 'My Favorites', path: '/dashboard/user/my-favorites' },
+    );
+    mobileNavlinks.push(
+      { name: 'Dashboard', path: '/dashboard/user', icon: LayoutDashboard },
+      {
+        name: 'Add Product',
+        path: '/dashboard/user/add-product',
+        icon: PlusCircle,
+      },
+      {
+        name: 'My favorites',
+        path: '/dashboard/user/my-favorites',
+        icon: HeartIcon,
+      },
+      { name: 'My Listings', path: '/dashboard/user/my-list', icon: List },
+      {
+        name: 'My Orders',
+        path: '/dashboard/user/my-orders',
+        icon: ShoppingBag,
+      },
+      {
+        name: 'Received Orders',
+        path: '/dashboard/user/received-orders',
+        icon: Package,
+      },
+      { name: 'My Profile', path: '/dashboard/user/profile', icon: UserCircle },
     );
   }
   navLinks.push({ name: 'About', path: '/about' });
@@ -76,7 +124,7 @@ const Navbar: React.FC = () => {
     await authClient.signOut();
     setIsProfileOpen(false);
     setIsMobileOpen(false);
-    // router.push('/');
+    router.push('/');
   };
 
   const getInitials = (name: string) =>
@@ -100,12 +148,13 @@ const Navbar: React.FC = () => {
             </span>
           </Link>
 
+          {/* ডেস্কটপ মেনু */}
           <div className="hidden lg:flex items-center space-x-8">
             {navLinks.map(link => (
               <Link
                 key={link.path}
                 href={link.path}
-                className={`text-sm font-bold transition-all relative pb-1 group cursor-pointer hover:text-blue-700 dark:hover:text-blue-400 ${pathname === link.path ? 'text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}
+                className={`text-sm font-bold tracking-tight transition-all relative pb-1 group cursor-pointer hover:text-blue-700 dark:hover:text-blue-400 ${pathname === link.path ? 'text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}
               >
                 {link.name}
                 {pathname === link.path && (
@@ -169,7 +218,6 @@ const Navbar: React.FC = () => {
                         </p>
                       </div>
                       <div className="p-2">
-                        {/* ৪. এখানে ডাইনামিক পাথ ব্যবহার করা হয়েছে */}
                         <Link
                           href={dashboardPath}
                           onClick={() => setIsProfileOpen(false)}
@@ -209,6 +257,7 @@ const Navbar: React.FC = () => {
         </div>
       </nav>
 
+      {/* মোবাইল ড্রয়ার: রোল অনুযায়ী সব NavItems এখানে থাকবে */}
       <AnimatePresence>
         {isMobileOpen && (
           <>
@@ -242,9 +291,9 @@ const Navbar: React.FC = () => {
                 <div className="flex items-center gap-4 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl mb-8 border border-slate-100 dark:border-slate-800">
                   {user.image ? (
                     <img
-                      src={user.image}
+                      src={user?.image}
                       alt="p"
-                      className="w-14 h-14 rounded-2xl object-cover"
+                      className="w-14 h-14 rounded-2xl object-cover border border-blue-500"
                     />
                   ) : (
                     <div className="w-14 h-14 rounded-2xl bg-blue-700 flex items-center justify-center text-white font-black">
@@ -253,17 +302,18 @@ const Navbar: React.FC = () => {
                   )}
                   <div className="overflow-hidden text-ellipsis">
                     <p className="font-bold text-slate-900 dark:text-white truncate">
-                      {user.name}
+                      {user?.name}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">
-                      {user.email}
+                    <p className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
+                      {user?.role} Seeker
                     </p>
                   </div>
                 </div>
               )}
 
-              <div className="flex flex-col space-y-3 flex-1 overflow-y-auto">
-                {navLinks.map(link => (
+              {/* ২. মোবাইল ভিউতে ডাইনামিক NavItems (রোল অনুযায়ী) */}
+              <div className="flex flex-col space-y-3 flex-1 overflow-y-auto custom-scrollbar">
+                {mobileNavlinks.map(link => (
                   <Link
                     key={link.name}
                     href={link.path}
@@ -278,13 +328,12 @@ const Navbar: React.FC = () => {
               <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
                 {isLoggedIn ? (
                   <div className="space-y-3">
-                    {/* ৫. মোবাইল ড্রয়ারেও ডাইনামিক ড্যাশবোর্ড পাথ */}
                     <Link
                       href={dashboardPath}
                       onClick={() => setIsMobileOpen(false)}
                       className="w-full flex justify-center py-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl font-black uppercase text-xs"
                     >
-                      Dashboard
+                      Dashboard Overview
                     </Link>
                     <button
                       onClick={handleLogout}
