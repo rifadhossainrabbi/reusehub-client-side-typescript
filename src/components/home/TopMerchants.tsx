@@ -2,16 +2,24 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, Box, Loader2 } from 'lucide-react';
+import { getData } from '@/lib/api';
 
 const TopMerchants = () => {
   const [merchants, setMerchants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/home/top-merchants`)
-      .then(res => res.json())
-      .then(data => setMerchants(data))
-      .finally(() => setLoading(false));
+    const fetchMerchants = async () => {
+      try {
+        const data = await getData('/api/home/top-merchants');
+        setMerchants(data);
+      } catch (err: any) {
+        console.error('Merchant load error:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMerchants();
   }, []);
 
   if (loading)

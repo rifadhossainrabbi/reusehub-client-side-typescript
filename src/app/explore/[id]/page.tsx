@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '@/components/shared/ProductCard';
 import toast, { Toaster } from 'react-hot-toast';
 import { authClient } from '@/lib/auth-client';
+import { getData, postData } from '@/lib/api';
 
 const ProductDetailsById = () => {
   const { id } = useParams();
@@ -52,32 +53,28 @@ const ProductDetailsById = () => {
     const fetchArchiveData = async () => {
       try {
         setLoading(true);
-        // 1. Get Main Product Data
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/products/${id}`,
-        );
-        const data = await res.json();
+
+        // ১. মেইন প্রোডাক্ট ডাটা
+        const data = await getData(`/api/products/${id}`);
         setProduct(data);
         setSelectedImg(data.imageUrl);
         setFavCount(data.favoriteCount || 0);
 
-        // 2. Get Related Items based on Category
-        const relRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/products/related/${data.category}`,
-        );
-        const relData = await relRes.json();
+        // ২. রিলেটেড আইটেমস
+        const relData = await getData(`/api/products/related/${data.category}`);
         setRelated(relData.filter((p: any) => p._id !== id));
 
-        // 3. Check if current user already favorited this artifact
+        // ৩. ফেভারিট স্ট্যাটাস চেক
         if (session?.user) {
-          const favRes = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/favorites/check?userId=${session.user.id}&productId=${id}`,
+          const favData = await getData(
+            `/api/favorites/check?userId=${session.user.id}&productId=${id}`,
           );
-          const favData = await favRes.json();
           setIsFavorited(favData.isFavorited);
         }
-      } catch (err) {
-        toast.error('Protocol failure: Could not retrieve artifact');
+      } catch (err: any) {
+        toast.error(
+          err.message || 'Protocol failure: Could not retrieve artifact',
+        );
       } finally {
         setLoading(false);
       }
@@ -93,33 +90,22 @@ const ProductDetailsById = () => {
       return toast.error('Identification required to save artifacts!');
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/favorites/toggle`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: session.user.id,
-            productId: product._id,
-            title: product.title,
-            imageUrl: product.imageUrl,
-            price: product.price,
-            category: product.category,
-          }),
-        },
-      );
-      const data = await res.json();
+      const data = await postData('/api/favorites/toggle', {
+        userId: session.user.id,
+        productId: product._id,
+        title: product.title,
+        imageUrl: product.imageUrl,
+        price: product.price,
+        category: product.category,
+      });
 
-      if (res.ok) {
-        setIsFavorited(data.isFavorited);
-        // Atomic update of the UI counter (5 to 6 or 6 to 5)
-        setFavCount(prev =>
-          data.isFavorited ? prev + 1 : Math.max(0, prev - 1),
-        );
-        toast.success(data.message);
-      }
-    } catch (err) {
-      toast.error('Wishlist synchronization failed');
+      setIsFavorited(data.isFavorited);
+      setFavCount(prev =>
+        data.isFavorited ? prev + 1 : Math.max(0, prev - 1),
+      );
+      toast.success(data.message);
+    } catch (err: any) {
+      toast.error(err.message || 'Wishlist synchronization failed');
     }
   };
 
@@ -144,20 +130,10 @@ const ProductDetailsById = () => {
     };
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      });
-      const data = await res.json();
-
-      if (res.ok) {
-        toast.success('Request sent to seller successfully!');
-      } else {
-        toast.error(data.message);
-      }
-    } catch (err) {
-      toast.error('Transmission failed');
+      await postData('/api/orders', orderData);
+      toast.success('Request sent to seller successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Transmission failed');
     } finally {
       setIsOrdering(false);
     }

@@ -2,14 +2,23 @@
 import React, { useEffect, useState } from 'react';
 import { Users, ShieldCheck, Zap, Globe, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { getData } from '@/lib/api';
 
 const MarketStats = () => {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/home/market-stats`)
-      .then(res => res.json())
-      .then(data => setStats(data));
+    const fetchMarketStats = async () => {
+      try {
+        // getData অটোমেটিক বেইজ ইউআরএল এবং স্ল্যাশ হ্যান্ডেল করবে
+        const data = await getData('/api/home/market-stats');
+        setStats(data);
+      } catch (err: any) {
+        console.error('Stats Sync Error:', err.message);
+      }
+    };
+
+    fetchMarketStats();
   }, []);
 
   return (

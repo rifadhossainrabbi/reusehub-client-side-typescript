@@ -4,22 +4,28 @@ import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import SkeletonCard from '@/components/shared/SkeletonCard';
+import { getData } from '@/lib/api';
 
 const FeaturedSection = () => {
   const [featured, setFeatured] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // API Call to fetch featured products
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/featured`)
-      .then(res => res.json())
-      .then(data => {
+    const fetchFeatured = async () => {
+      try {
+        // getData অটোমেটিক বেইজ ইউআরএল হ্যান্ডেল করবে
+        const data = await getData('/api/products/featured');
         if (Array.isArray(data)) {
-          setFeatured(data.slice(0, 6)); // Ensure exactly 6 cards are shown
+          setFeatured(data.slice(0, 6)); // ঠিক ৬টি কার্ড দেখানোর জন্য
         }
-      })
-      .catch(err => console.error('Fetch error:', err))
-      .finally(() => setLoading(false));
+      } catch (err: any) {
+        console.error('Fetch error:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeatured();
   }, []);
 
   return (

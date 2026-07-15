@@ -13,6 +13,7 @@ import {
 import SkeletonCard from '@/components/shared/SkeletonCard';
 import ProductCard from '@/components/shared/ProductCard';
 import toast, { Toaster } from 'react-hot-toast';
+import { getData } from '@/lib/api';
 
 const ExploreProductsPage = () => {
   // Data States
@@ -29,9 +30,11 @@ const ExploreProductsPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Data Fetching Function
+  // Data Fetching Function (Updated with getData)
   const fetchProducts = async () => {
     setLoading(true);
+
+    // কোয়েরি প্যারামিটার তৈরি
     const queryString = new URLSearchParams({
       search,
       category,
@@ -42,16 +45,15 @@ const ExploreProductsPage = () => {
     }).toString();
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/products?${queryString}`,
-      );
-      const data = await res.json();
-      setProducts(data.products);
-      setTotalPages(data.totalPages);
-      setTotalItems(data.totalItems);
-    } catch (err) {
-      console.error('Fetch Error:', err);
-      toast.error('Failed to connect to sanctuary archives');
+      // সরাসরি getData ব্যবহার করা হয়েছে
+      const data = await getData(`/api/products?${queryString}`);
+
+      setProducts(data.products || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalItems(data.totalItems || 0);
+    } catch (err: any) {
+      console.error('Fetch Error:', err.message);
+      toast.error(err.message || 'Failed to connect to sanctuary archives');
     } finally {
       setLoading(false);
     }
@@ -321,6 +323,6 @@ const ExploreProductsPage = () => {
       </div>
     </div>
   );
-};
+};;
 
 export default ExploreProductsPage;
