@@ -33,6 +33,7 @@ import Link from 'next/link';
 import { authClient } from '@/lib/auth-client';
 import toast, { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { getData } from '@/lib/api';
 
 const DashboardUserHomePage = () => {
   const [intel, setIntel] = useState<any>(null);
@@ -55,13 +56,12 @@ const DashboardUserHomePage = () => {
     const fetchIntel = async () => {
       if (!session?.user?.id) return;
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/user-intel/${session.user.id}`,
+        const data = await getData(
+          `/api/dashboard/user-intel/${session.user.id}`,
         );
-        const data = await res.json();
         setIntel(data);
-      } catch (err) {
-        toast.error('Failed to sync sanctuary intel');
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to sync sanctuary intel');
       } finally {
         setLoading(false);
       }
