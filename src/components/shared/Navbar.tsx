@@ -88,78 +88,87 @@ const Navbar: React.FC = () => {
 
   if (!mounted) return null;
 
-  // ১. ডাইনামিক লিঙ্ক জেনারেটর (ডেস্কটপের জন্য)
+  // ১. ডাইনামিক লিঙ্ক জেনারেটর (ডেস্কটপের জন্য) - সব অবস্থায় কমন লিঙ্ক
   const navLinks: NavLink[] = [
     { name: 'Home', path: '/' },
     { name: 'Explore Gadgets', path: '/explore' },
   ];
 
-  // ২. মোবাইল লিঙ্ক (আইকন সহ)
+  // ২. মোবাইল লিঙ্ক (আইকন সহ) - সব অবস্থায় কমন লিঙ্ক
   const mobileNavlinks: NavLink[] = [
     { name: 'Home', path: '/' },
     { name: 'Explore Gadgets', path: '/explore' },
-    { name: 'About', path: '/about' },
   ];
 
-  // Admin links
-  if (userRole === 'admin') {
-    navLinks.push(
-      { name: 'Manage Products', path: '/dashboard/admin/manage-products' },
-      { name: 'Manage Users', path: '/dashboard/admin/manage-users' },
-    );
-    mobileNavlinks.push(
-      { name: 'Dashboard', path: '/dashboard/admin', icon: LayoutDashboard },
-      {
-        name: 'Manage Users',
-        path: '/dashboard/admin/manage-users',
-        icon: Users,
-      },
-      {
-        name: 'Manage Products',
-        path: '/dashboard/admin/manage-products',
-        icon: Box,
-      },
-      {
-        name: 'System Profile',
-        path: '/dashboard/admin/profile',
-        icon: UserCircle,
-      },
-    );
-  }
-  // User links
-  else if (userRole === 'user') {
-    navLinks.push(
-      { name: 'Add Product', path: '/dashboard/user/add-product' },
-      { name: 'My Favorites', path: '/dashboard/user/my-favorites' },
-    );
-    mobileNavlinks.push(
-      { name: 'Dashboard', path: '/dashboard/user', icon: LayoutDashboard },
-      {
-        name: 'Add Product',
-        path: '/dashboard/user/add-product',
-        icon: PlusCircle,
-      },
-      {
-        name: 'My favorites',
-        path: '/dashboard/user/my-favorites',
-        icon: HeartIcon,
-      },
-      { name: 'My Listings', path: '/dashboard/user/my-list', icon: List },
-      {
-        name: 'My Orders',
-        path: '/dashboard/user/my-orders',
-        icon: ShoppingBag,
-      },
-      {
-        name: 'Received Orders',
-        path: '/dashboard/user/received-orders',
-        icon: Package,
-      },
-      { name: 'My Profile', path: '/dashboard/user/profile', icon: UserCircle },
-    );
+  // শুধুমাত্র logged in অবস্থায় dashboard related links যোগ করুন
+  if (isLoggedIn) {
+    if (userRole === 'admin') {
+      navLinks.push(
+        { name: 'Manage Products', path: '/dashboard/admin/manage-products' },
+        { name: 'Manage Users', path: '/dashboard/admin/manage-users' },
+      );
+      mobileNavlinks.push(
+        { name: 'Dashboard', path: '/dashboard/admin', icon: LayoutDashboard },
+        {
+          name: 'Manage Users',
+          path: '/dashboard/admin/manage-users',
+          icon: Users,
+        },
+        {
+          name: 'Manage Products',
+          path: '/dashboard/admin/manage-products',
+          icon: Box,
+        },
+        {
+          name: 'System Profile',
+          path: '/dashboard/admin/profile',
+          icon: UserCircle,
+        },
+      );
+    } else if (userRole === 'user') {
+      navLinks.push(
+        { name: 'Add Product', path: '/dashboard/user/add-product' },
+        { name: 'My Favorites', path: '/dashboard/user/my-favorites' },
+      );
+      mobileNavlinks.push(
+        { name: 'Dashboard', path: '/dashboard/user', icon: LayoutDashboard },
+        {
+          name: 'Add Product',
+          path: '/dashboard/user/add-product',
+          icon: PlusCircle,
+        },
+        {
+          name: 'My favorites',
+          path: '/dashboard/user/my-favorites',
+          icon: HeartIcon,
+        },
+        { name: 'My Listings', path: '/dashboard/user/my-list', icon: List },
+        {
+          name: 'My Orders',
+          path: '/dashboard/user/my-orders',
+          icon: ShoppingBag,
+        },
+        {
+          name: 'Received Orders',
+          path: '/dashboard/user/received-orders',
+          icon: Package,
+        },
+        {
+          name: 'My Profile',
+          path: '/dashboard/user/profile',
+          icon: UserCircle,
+        },
+      );
+    }
   }
 
+  // সব অবস্থায় About যোগ করুন (সবচেয়ে শেষে)
   navLinks.push({ name: 'About', path: '/about' });
+
+  // মোবাইল লিংকেও About যোগ করুন (যদি ইতিমধ্যে না থাকে)
+  if (!mobileNavlinks.some(link => link.path === '/about')) {
+    mobileNavlinks.push({ name: 'About', path: '/about' });
+  }
 
   const handleLogout = async () => {
     await authClient.signOut();
