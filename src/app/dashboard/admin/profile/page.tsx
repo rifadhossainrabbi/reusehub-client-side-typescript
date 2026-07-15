@@ -18,6 +18,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { getData, patchData } from '@/lib/api';
 
 const AdminProfilePage = () => {
   // States
@@ -37,7 +38,7 @@ const AdminProfilePage = () => {
     }
   }, [session, isPending, router]);
 
-  // Load user data and system stats
+  // ডাটা এবং সিস্টেম স্ট্যাটস লোড করা
   useEffect(() => {
     if (user) {
       setFormData({
@@ -45,46 +46,55 @@ const AdminProfilePage = () => {
         image: user.image || '',
       });
 
-      // Fetch system overview stats
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`)
-        .then(res => res.json())
-        .then(data =>
-          setStats(prev => ({ ...prev, users: data.users?.length || 0 })),
-        );
+      // একটি async ফাংশন তৈরি করুন ডাটা ফেচ করার জন্য
+      const fetchSystemIntel = async () => {
+        try {
+          // এখন সরাসরি getData ব্যবহার করুন, এটি অটোমেটিক টোকেন আর URL হ্যান্ডেল করবে
+          const usersData = await getData('/api/admin/users');
+          const productsData = await getData('/api/admin/products');
 
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/products`)
-        .then(res => res.json())
-        .then(data =>
-          setStats(prev => ({ ...prev, products: data.totalItems || 0 })),
-        );
+          setStats({
+            users: usersData.users?.length || 0,
+            products: productsData.totalItems || 0,
+          });
+        } catch (err: any) {
+          console.error('Intel Load Error:', err.message);
+          // ঐচ্ছিক: চাইলে এখানেও একটি ছোট টোস্ট দেখাতে পারেন
+        }
+      };
+
+      fetchSystemIntel();
     }
   }, [user]);
 
+  // প্রোফাইল আপডেট ফাংশন
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user?.id) return toast.error('User identity not found!');
+
     setUpdating(true);
     const loadingToast = toast.loading('Syncing admin credentials...');
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/${user?.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        },
-      );
-      const data = await res.json();
+      // আমরা শুধুমাত্র name এবং image পাঠাচ্ছি
+      const payload = {
+        name: formData.name,
+        image: formData.image,
+      };
 
-      if (res.ok) {
-        toast.success('Archives updated successfully!', { id: loadingToast });
-        setIsEditing(false);
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        toast.error(data.message, { id: loadingToast });
-      }
-    } catch (err) {
-      toast.error('Protocol failure', { id: loadingToast });
+      const result = await patchData(`/api/users/${user.id}`, payload);
+
+      toast.success(result.message || 'Identity updated!', {
+        id: loadingToast,
+      });
+      setIsEditing(false);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      toast.error(err.message || 'Protocol failure', { id: loadingToast });
     } finally {
       setUpdating(false);
     }

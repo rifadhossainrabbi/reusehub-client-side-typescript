@@ -1,69 +1,53 @@
 import { authClient } from './auth-client';
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+).replace(/\/$/, '');
 
 async function getHeaders() {
-  const { data: session } = await authClient.getSession();
-  const token = session?.session?.token;
+  const session = await authClient.getSession();
+  const token =
+    session?.data?.session?.token || (session as any)?.session?.token;
 
-  return {
+  const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(token && {
-      Authorization: `Bearer ${token}`,
-    }),
   };
-}
 
-// GET
-export async function getData(url: string) {
-  console.log(url, "url")
-  const res = await fetch(`${API}${url}`, {
-    credentials: 'include',
-    headers: await getHeaders(),
-  });
-
-  if (!res.ok) throw new Error('Request failed');
-  return res.json();
-}
-
-// POST
-export async function postData(url: string, body: unknown) {
-  const res = await fetch(`${API}${url}`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: await getHeaders(),
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) throw new Error('Request failed');
-  return res.json();
-}
-
-// PATCH
-export async function patchData(url: string, body: unknown) {
-  const res = await fetch(`${API}${url}`, {
-    method: 'PATCH',
-    credentials: 'include',
-    headers: await getHeaders(),
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    // সার্ভারের পাঠানো আসল মেসেজ (যেমন: "Only Master Admin...") থ্রো করবে
-    throw new Error(errorData.message || 'Request failed');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-  return res.json();
+
+  return headers;
 }
 
-// DELETE
-export async function deleteData(url: string) {
-  const res = await fetch(`${API}${url}`, {
-    method: 'DELETE',
-    credentials: 'include',
-    headers: await getHeaders(),
-  });
+async function request(url: string, options: RequestInit) {
+  try {
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    const fullUrl = `${API_BASE}${cleanUrl}`;
 
-  if (!res.ok) throw new Error('Request failed');
-  return res.json();
+    console.log(`🌐 Calling: ${fullUrl}`);
+
+    const res = await fetch(fullUrl, {
+      ...options,
+      credentials: 'include',
+      headers: await getHeaders(),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || `Server Error: ${res.status}`);
+    }
+
+    return res.json();
+  } catch (error: any) {
+    console.error('❌ API Request Failed:', error.message);
+    throw error;
+  }
 }
+
+export const getData = (url: string) => request(url, { method: 'GET' });
+export const postData = (url: string, body: unknown) =>
+  request(url, { method: 'POST', body: JSON.stringify(body) });
+export const patchData = (url: string, body: unknown) =>
+  request(url, { method: 'PATCH', body: JSON.stringify(body) });
+export const deleteData = (url: string) => request(url, { method: 'DELETE' });
