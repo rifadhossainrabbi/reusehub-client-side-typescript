@@ -28,7 +28,18 @@ const AdminProfilePage = () => {
   const [formData, setFormData] = useState({ name: '', image: '' });
 
   const { data: session, isPending } = authClient.useSession();
-  const user = session?.user;
+
+  // ১. ইউজার টাইপ কাস্টিং (বিল্ড এরর ফিক্স করার জন্য)
+  const user = session?.user as
+    | {
+        id: string;
+        name: string;
+        email: string;
+        image?: string | null;
+        role?: string;
+        admin?: string;
+      }
+    | undefined;
 
   const router = useRouter();
 
@@ -46,10 +57,8 @@ const AdminProfilePage = () => {
         image: user.image || '',
       });
 
-      // একটি async ফাংশন তৈরি করুন ডাটা ফেচ করার জন্য
       const fetchSystemIntel = async () => {
         try {
-          // এখন সরাসরি getData ব্যবহার করুন, এটি অটোমেটিক টোকেন আর URL হ্যান্ডেল করবে
           const usersData = await getData('/api/admin/users');
           const productsData = await getData('/api/admin/products');
 
@@ -59,7 +68,6 @@ const AdminProfilePage = () => {
           });
         } catch (err: any) {
           console.error('Intel Load Error:', err.message);
-          // ঐচ্ছিক: চাইলে এখানেও একটি ছোট টোস্ট দেখাতে পারেন
         }
       };
 
@@ -77,7 +85,6 @@ const AdminProfilePage = () => {
     const loadingToast = toast.loading('Syncing admin credentials...');
 
     try {
-      // আমরা শুধুমাত্র name এবং image পাঠাচ্ছি
       const payload = {
         name: formData.name,
         image: formData.image,
@@ -139,14 +146,17 @@ const AdminProfilePage = () => {
         {/* LEFT COLUMN: AUTH CARD */}
         <div className="lg:col-span-5 space-y-8">
           <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center space-y-6 relative overflow-hidden">
-            {/* Master Decoration */}
             <div className="absolute -top-10 -right-10 opacity-5 dark:opacity-10 text-blue-600">
               <ShieldCheck size={200} />
             </div>
 
             <div className="relative group">
               <div
-                className={`w-44 h-44 rounded-[2.5rem] overflow-hidden border-4 bg-slate-50 dark:bg-slate-950 flex items-center justify-center transition-all ${user.role === 'admin' ? 'border-amber-400 ring-4 ring-amber-400/10' : 'border-blue-500 ring-4 ring-blue-500/10'}`}
+                className={`w-44 h-44 rounded-[2.5rem] overflow-hidden border-4 bg-slate-50 dark:bg-slate-950 flex items-center justify-center transition-all ${
+                  user?.role === 'admin'
+                    ? 'border-amber-400 ring-4 ring-amber-400/10'
+                    : 'border-blue-500 ring-4 ring-blue-500/10'
+                }`}
               >
                 {user.image ? (
                   <img
@@ -159,7 +169,9 @@ const AdminProfilePage = () => {
                 )}
               </div>
               <div
-                className={`absolute -bottom-2 -right-2 p-3 rounded-2xl text-white shadow-lg ${user.role === 'admin' ? 'bg-amber-500' : 'bg-blue-600'}`}
+                className={`absolute -bottom-2 -right-2 p-3 rounded-2xl text-white shadow-lg ${
+                  user?.role === 'admin' ? 'bg-amber-500' : 'bg-blue-600'
+                }`}
               >
                 <Crown size={20} />
               </div>
@@ -170,10 +182,12 @@ const AdminProfilePage = () => {
                 {user.name}
               </h3>
               <p
-                className={`font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-2 ${user.role === 'admin' ? 'text-amber-600' : 'text-blue-600'}`}
+                className={`font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-2 ${
+                  user?.role === 'admin' ? 'text-amber-600' : 'text-blue-600'
+                }`}
               >
                 <ShieldCheck size={12} /> Sanctuary{' '}
-                {(user as any).admin === 'master' ? 'Master' : 'Admin'}
+                {user?.admin === 'master' ? 'Master' : 'Admin'}
               </p>
             </div>
 
@@ -182,7 +196,7 @@ const AdminProfilePage = () => {
             </div>
           </div>
 
-          {/* SYSTEM OVERVIEW MINI STATS */}
+          {/* MINI STATS */}
           <div className="bg-slate-50 dark:bg-slate-900/50 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-6">
             <div className="space-y-1">
               <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">
@@ -250,7 +264,6 @@ const AdminProfilePage = () => {
                         setFormData({ ...formData, name: e.target.value })
                       }
                       className="w-full bg-slate-50 dark:bg-slate-950 border border-transparent focus:ring-2 focus:ring-blue-600 rounded-2xl p-5 text-sm font-bold text-slate-900 dark:text-white outline-none transition-all"
-                      placeholder="Enter legal name"
                     />
                   </div>
                   <div className="space-y-3">
@@ -269,7 +282,6 @@ const AdminProfilePage = () => {
                           setFormData({ ...formData, image: e.target.value })
                         }
                         className="w-full bg-slate-50 dark:bg-slate-950 border border-transparent focus:ring-2 focus:ring-blue-600 rounded-2xl pl-14 pr-6 py-5 text-sm font-bold text-slate-900 dark:text-white outline-none transition-all"
-                        placeholder="https://sanctuary.com/admin.jpg"
                       />
                     </div>
                   </div>

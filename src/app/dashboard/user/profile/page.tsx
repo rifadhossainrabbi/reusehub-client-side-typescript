@@ -18,7 +18,18 @@ import { patchData } from '@/lib/api';
 
 const UserProfile = () => {
   const { data: session, isPending } = authClient.useSession();
-  const user = session?.user;
+
+  // ১. টাইপ এরর ফিক্স করার জন্য ইউজার অবজেক্টকে টাইপ কাস্ট করা হয়েছে
+  const user = session?.user as
+    | {
+        id: string;
+        name: string;
+        email: string;
+        image?: string | null;
+        role?: string;
+      }
+    | undefined;
+
   const router = useRouter();
 
   useEffect(() => {
@@ -85,6 +96,13 @@ const UserProfile = () => {
     }
   };
 
+  if (isPending)
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-600" size={40} />
+      </div>
+    );
+
   if (!user)
     return (
       <div className="h-96 flex items-center justify-center animate-pulse text-blue-600 font-black uppercase tracking-widest">
@@ -144,7 +162,7 @@ const UserProfile = () => {
               {user.name}
             </h3>
             <p className="text-blue-600 font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-1">
-              <Shield size={12} /> Verified {user.role}
+              <Shield size={12} /> Verified {user?.role || 'user'}
             </p>
           </div>
 

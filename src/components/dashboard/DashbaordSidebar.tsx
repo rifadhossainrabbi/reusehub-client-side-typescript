@@ -1,3 +1,4 @@
+// src/components/dashboard/DashbaordSidebar.tsx
 'use client';
 import React from 'react';
 import Link from 'next/link';
@@ -16,11 +17,23 @@ import {
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 
+// Custom type for user with role
+interface UserWithRole {
+  id: string;
+  name?: string | null;
+  email?: string;
+  image?: string | null;
+  role?: string;
+  [key: string]: any; // For other properties
+}
+
 const DashboardSidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = authClient.useSession();
-  const user = session?.user;
+
+  // Type assertion to access role
+  const user = session?.user as UserWithRole | undefined;
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -68,13 +81,11 @@ const DashboardSidebar = () => {
     },
   ];
 
-  const links = user?.role === 'admin' ? adminLinks : userLinks;
+  // Check role safely
+  const isAdmin = user?.role === 'admin';
+  const links = isAdmin ? adminLinks : userLinks;
 
   return (
-    /* 
-       ১. sticky top-20: ন্যাভবার h-20 (80px) তাই সাইডবার ২০ থেকে শুরু হবে।
-       ২. h-[calc(100vh-5rem)]: পুরো হাইট থেকে ন্যাভবারের জায়গা বাদ।
-    */
     <aside className="hidden lg:flex w-72 sticky top-20 h-[calc(100vh-5rem)] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col z-30">
       {/* প্রোফাইল কার্ড */}
       <div className="p-6 mb-4">
@@ -87,15 +98,15 @@ const DashboardSidebar = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              user?.name?.slice(0, 1)
+              user?.name?.slice(0, 1) || 'U'
             )}
           </div>
           <div className="overflow-hidden">
             <p className="text-sm font-black text-slate-900 dark:text-white truncate">
-              {user?.name}
+              {user?.name || 'User'}
             </p>
             <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">
-              {user?.role}
+              {user?.role || 'user'}
             </p>
           </div>
         </div>

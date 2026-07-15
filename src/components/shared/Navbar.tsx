@@ -1,3 +1,4 @@
+// src/components/shared/Navbar.tsx
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -15,7 +16,38 @@ import {
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authClient } from '@/lib/auth-client';
-import { Box, HeartIcon, LayoutDashboard, List, Package, PlusCircle, ShoppingBag, UserCircle, Users } from 'lucide-react';
+import {
+  Box,
+  HeartIcon,
+  LayoutDashboard,
+  List,
+  Package,
+  PlusCircle,
+  ShoppingBag,
+  UserCircle,
+  Users,
+  LucideIcon,
+} from 'lucide-react';
+
+// User type with role
+interface UserWithRole {
+  id: string;
+  name?: string | null;
+  email?: string;
+  image?: string | null;
+  role?: string;
+  admin?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  emailVerified?: boolean;
+}
+
+// Nav link type
+interface NavLink {
+  name: string;
+  path: string;
+  icon?: LucideIcon; // icon optional
+}
 
 const Navbar: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -28,11 +60,15 @@ const Navbar: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: session } = authClient.useSession();
-  const user = session?.user;
+
+  // Type assertion for user with role
+  const user = session?.user as UserWithRole | undefined;
   const isLoggedIn = !!user;
 
+  // Safe role check
+  const userRole = user?.role || 'user';
   const dashboardPath =
-    user?.role === 'admin' ? '/dashboard/admin' : '/dashboard/user';
+    userRole === 'admin' ? '/dashboard/admin' : '/dashboard/user';
 
   useEffect(() => setMounted(true), []);
 
@@ -52,19 +88,21 @@ const Navbar: React.FC = () => {
 
   if (!mounted) return null;
 
-  // ১. ডাইনামিক লিঙ্ক জেনারেটর (মোবাইল ও ডেস্কটপ উভয়ের জন্য)
-  const navLinks = [
+  // ১. ডাইনামিক লিঙ্ক জেনারেটর (ডেস্কটপের জন্য)
+  const navLinks: NavLink[] = [
     { name: 'Home', path: '/' },
     { name: 'Explore Gadgets', path: '/explore' },
   ];
 
-  const mobileNavlinks = [
+  // ২. মোবাইল লিঙ্ক (আইকন সহ)
+  const mobileNavlinks: NavLink[] = [
     { name: 'Home', path: '/' },
     { name: 'Explore Gadgets', path: '/explore' },
     { name: 'About', path: '/about' },
   ];
 
-  if (user?.role === 'admin') {
+  // Admin links
+  if (userRole === 'admin') {
     navLinks.push(
       { name: 'Manage Products', path: '/dashboard/admin/manage-products' },
       { name: 'Manage Users', path: '/dashboard/admin/manage-users' },
@@ -87,7 +125,9 @@ const Navbar: React.FC = () => {
         icon: UserCircle,
       },
     );
-  } else if (user?.role === 'user') {
+  }
+  // User links
+  else if (userRole === 'user') {
     navLinks.push(
       { name: 'Add Product', path: '/dashboard/user/add-product' },
       { name: 'My Favorites', path: '/dashboard/user/my-favorites' },
@@ -118,13 +158,13 @@ const Navbar: React.FC = () => {
       { name: 'My Profile', path: '/dashboard/user/profile', icon: UserCircle },
     );
   }
+
   navLinks.push({ name: 'About', path: '/about' });
 
   const handleLogout = async () => {
     await authClient.signOut();
     setIsProfileOpen(false);
     setIsMobileOpen(false);
-    // router.push('/');
   };
 
   const getInitials = (name: string) =>
@@ -181,15 +221,15 @@ const Navbar: React.FC = () => {
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center space-x-2 p-1.5 pr-4 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-blue-500 transition-all"
                 >
-                  {user.image ? (
+                  {user?.image ? (
                     <img
-                      src={user?.image}
+                      src={user.image}
                       alt="p"
                       className="w-9 h-9 rounded-full object-cover border-2 border-blue-500"
                     />
                   ) : (
                     <div className="w-9 h-9 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-black">
-                      {getInitials(user.name || 'User')}
+                      {getInitials(user?.name || 'User')}
                     </div>
                   )}
                   <FaChevronDown
@@ -208,13 +248,13 @@ const Navbar: React.FC = () => {
                     >
                       <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 border-b border-slate-100 dark:border-slate-800">
                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">
-                          {user.role}
+                          {userRole}
                         </p>
                         <p className="font-bold text-slate-900 dark:text-white truncate">
-                          {user.name}
+                          {user?.name}
                         </p>
                         <p className="text-xs text-slate-500 truncate">
-                          {user.email}
+                          {user?.email}
                         </p>
                       </div>
                       <div className="p-2">
@@ -289,15 +329,15 @@ const Navbar: React.FC = () => {
 
               {isLoggedIn && (
                 <div className="flex items-center gap-4 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl mb-8 border border-slate-100 dark:border-slate-800">
-                  {user.image ? (
+                  {user?.image ? (
                     <img
-                      src={user?.image}
+                      src={user.image}
                       alt="p"
                       className="w-14 h-14 rounded-2xl object-cover border border-blue-500"
                     />
                   ) : (
                     <div className="w-14 h-14 rounded-2xl bg-blue-700 flex items-center justify-center text-white font-black">
-                      {getInitials(user.name!)}
+                      {getInitials(user?.name || 'User')}
                     </div>
                   )}
                   <div className="overflow-hidden text-ellipsis">
@@ -305,7 +345,7 @@ const Navbar: React.FC = () => {
                       {user?.name}
                     </p>
                     <p className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
-                      {user?.role} Seeker
+                      {userRole} Seeker
                     </p>
                   </div>
                 </div>
@@ -318,8 +358,9 @@ const Navbar: React.FC = () => {
                     key={link.name}
                     href={link.path}
                     onClick={() => setIsMobileOpen(false)}
-                    className={`p-4 rounded-2xl font-bold transition-all ${pathname === link.path ? 'bg-blue-700 text-white shadow-lg shadow-blue-500/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                    className={`p-4 rounded-2xl font-bold transition-all flex items-center gap-3 ${pathname === link.path ? 'bg-blue-700 text-white shadow-lg shadow-blue-500/30' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                   >
+                    {link.icon && <link.icon size={20} />}
                     {link.name}
                   </Link>
                 ))}

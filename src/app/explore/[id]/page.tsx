@@ -1,3 +1,4 @@
+// src/app/explore/[id]/page.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -46,6 +47,9 @@ const ProductDetailsById = () => {
   // Derived state to check if current user is the owner
   const isOwner = session?.user?.id === product?.seller?.id;
 
+  // Get the actual id string (handle both string and string[] cases)
+  const productId = Array.isArray(id) ? id[0] : id;
+
   /**
    * Fetch all necessary data: Product Details, Related Items, and Favorite Status
    */
@@ -55,19 +59,19 @@ const ProductDetailsById = () => {
         setLoading(true);
 
         // ১. মেইন প্রোডাক্ট ডাটা
-        const data = await getData(`/api/products/${id}`);
+        const data = await getData(`/api/products/${productId}`);
         setProduct(data);
         setSelectedImg(data.imageUrl);
         setFavCount(data.favoriteCount || 0);
 
         // ২. রিলেটেড আইটেমস
         const relData = await getData(`/api/products/related/${data.category}`);
-        setRelated(relData.filter((p: any) => p._id !== id));
+        setRelated(relData.filter((p: any) => p._id !== productId));
 
         // ৩. ফেভারিট স্ট্যাটাস চেক
         if (session?.user) {
           const favData = await getData(
-            `/api/favorites/check?userId=${session.user.id}&productId=${id}`,
+            `/api/favorites/check?userId=${session.user.id}&productId=${productId}`,
           );
           setIsFavorited(favData.isFavorited);
         }
@@ -79,8 +83,8 @@ const ProductDetailsById = () => {
         setLoading(false);
       }
     };
-    if (id) fetchArchiveData();
-  }, [id, session]);
+    if (productId) fetchArchiveData();
+  }, [productId, session]);
 
   /**
    * Toggle favorite status and sync counter in real-time
@@ -148,6 +152,17 @@ const ProductDetailsById = () => {
         </p>
       </div>
     );
+
+  if (!product) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center space-y-4 bg-white dark:bg-slate-950">
+        <p className="font-black text-2xl text-slate-600">Artifact not found</p>
+        <Link href="/explore" className="text-blue-600 hover:underline">
+          Return to Archives
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-[#020617] transition-colors duration-500 min-h-screen">
@@ -317,7 +332,7 @@ const ProductDetailsById = () => {
               <div className="bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
                 <SpecRow
                   label="Sanctuary Registry"
-                  value={`#${id?.slice(-8).toUpperCase()}`}
+                  value={`#${productId ? productId.slice(-8).toUpperCase() : 'N/A'}`}
                 />
                 <SpecRow label="Architecture" value={product.category} />
                 <SpecRow label="Deployment" value="Late 2023" />
