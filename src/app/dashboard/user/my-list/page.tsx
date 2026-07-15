@@ -1,3 +1,4 @@
+// src/components/dashboard/MyProductList.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
@@ -14,6 +15,7 @@ import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 import DeleteConfirmModal from './DeleteConfiramtionModal';
 import { useRouter } from 'next/navigation';
+import { getData, deleteData } from '@/lib/api'; // API utility import করুন
 
 const MyProductList = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -27,29 +29,28 @@ const MyProductList = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-    const { data: session, isPending } = authClient.useSession();
-    const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
 
-    useEffect(() => {
-      if (!isPending && !session) {
-        router.replace('/login');
-      }
-    }, [session, isPending, router]);
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/login');
+    }
+  }, [session, isPending, router]);
 
   const fetchMyProducts = async (page: number) => {
     if (!session?.user?.id) return;
     setLoading(true);
     try {
-      // Backend URL should ideally be in env variable
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const res = await fetch(
-        `${apiUrl}/api/my-products/${session.user.id}?page=${page}`,
+      // API utility ব্যবহার করুন (যা automatically token পাঠাবে)
+      const data = await getData(
+        `/api/my-products/${session.user.id}?page=${page}`,
       );
-      const data = await res.json();
       setProducts(data.products || []);
       setTotalPages(data.totalPages || 1);
-    } catch (err) {
-      toast.error('Could not connect to sanctuary archives');
+    } catch (err: any) {
+      console.error('Fetch error:', err);
+      toast.error(err.message || 'Could not connect to sanctuary archives');
     } finally {
       setLoading(false);
     }
@@ -67,17 +68,12 @@ const MyProductList = () => {
   const executeDelete = async () => {
     if (!selectedProduct) return;
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/products/${selectedProduct._id}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        toast.success('Gadget erased from archives');
-        setModalOpen(false);
-        fetchMyProducts(currentPage); // Refresh current view
-      }
-    } catch (err) {
-      toast.error('Deletion protocol failed');
+      await deleteData(`/api/products/${selectedProduct._id}`);
+      toast.success('Gadget erased from archives');
+      setModalOpen(false);
+      fetchMyProducts(currentPage); // Refresh current view
+    } catch (err: any) {
+      toast.error(err.message || 'Deletion protocol failed');
     }
   };
 
@@ -160,7 +156,7 @@ const MyProductList = () => {
                     </Link>
 
                     <Link
-                      href={`/dashboard/user/my-list/${product._id}`} 
+                      href={`/dashboard/user/my-list/${product._id}`}
                       className="flex-1 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex items-center justify-center hover:bg-blue-50 transition-all cursor-pointer"
                     >
                       <Edit3 size={18} />

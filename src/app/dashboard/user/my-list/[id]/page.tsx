@@ -1,3 +1,4 @@
+// src/app/dashboard/user/my-list/[id]/page.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -14,6 +15,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authClient } from '@/lib/auth-client';
+import { getData, patchData } from '@/lib/api'; // API Utility import
 
 interface IProductForm {
   title: string;
@@ -48,7 +50,6 @@ const EditProductPage = () => {
   const [existingImageUrl, setExistingImageUrl] = useState('');
 
   const IMGBB_API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
@@ -62,30 +63,30 @@ const EditProductPage = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/products/${id}`);
-        const data = await res.json();
+        // ✅ API Utility ব্যবহার করুন (যা automatically token পাঠাবে)
+        const data = await getData(`/api/products/${id}`);
 
-        if (res.ok) {
-          reset({
-            title: data.title || '',
-            price: data.price?.toString() || '',
-            category: data.category || 'Smartphone',
-            shortDescription: data.shortDescription || '',
-            fullDescription: data.fullDescription || '',
-          });
-          setExistingImageUrl(data.imageUrl);
-          setPreviewImage(data.imageUrl);
-        } else {
-          toast.error('Failed to fetch product');
-        }
-      } catch (err) {
-        toast.error('Protocol error: Artifact logs unreachable');
+        reset({
+          title: data.title || '',
+          price: data.price?.toString() || '',
+          category: data.category || 'Smartphone',
+          shortDescription: data.shortDescription || '',
+          fullDescription: data.fullDescription || '',
+        });
+        setExistingImageUrl(data.imageUrl);
+        setPreviewImage(data.imageUrl);
+      } catch (err: any) {
+        console.error('Fetch error:', err);
+        toast.error(err.message || 'Protocol error: Artifact logs unreachable');
       } finally {
         setLoading(false);
       }
     };
-    fetchProduct();
-  }, [id, reset, API_URL]);
+
+    if (id) {
+      fetchProduct();
+    }
+  }, [id, reset]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,7 +98,6 @@ const EditProductPage = () => {
   const onSubmit = async (formData: IProductForm) => {
     console.log('✅ Form Data:', formData);
     console.log('✅ Price from form:', formData.price);
-    console.log('✅ Price type:', typeof formData.price);
 
     setIsUpdating(true);
     const loadingToast = toast.loading('Synchronizing updates to sanctuary...');
@@ -105,7 +105,7 @@ const EditProductPage = () => {
     try {
       let finalImageUrl = existingImageUrl;
 
-      // ১. নতুন ইমেজ আপলোড
+      // ১. নতুন ইমেজ আপলোড (যদি থাকে)
       if (formData.image && formData.image.length > 0) {
         const uploadData = new FormData();
         uploadData.append('image', formData.image[0]);
@@ -120,41 +120,33 @@ const EditProductPage = () => {
         const imgData = await imgRes.json();
         if (imgData.success) {
           finalImageUrl = imgData.data.url;
+        } else {
+          throw new Error('Image upload failed');
         }
       }
 
       // ২. ডাটা প্রস্তুত করা
       const { image, ...rest } = formData;
-
-      // ✅ সমাধান: সরাসরি number এ কনভার্ট করুন, কোনো রাউন্ডিং বা ফ্লোটিং ইস্যু নেই
       const priceNumber = Number(formData.price);
 
-      // চেক করুন NaN কিনা
-      if (isNaN(priceNumber)) {
-        throw new Error('Invalid price format');
+      if (isNaN(priceNumber) || priceNumber <= 0) {
+        throw new Error('Please enter a valid price');
       }
-
-      console.log('✅ Converted Price:', priceNumber);
-      console.log('✅ Price type after conversion:', typeof priceNumber);
 
       const updatedPayload = {
         ...rest,
-        price: priceNumber, // number এ পাঠান
+        price: priceNumber,
         imageUrl: finalImageUrl,
       };
 
       console.log('📤 Sending to backend:', updatedPayload);
 
-      // ৩. ব্যাকেন্ডে প্যাচ রিকোয়েস্ট
-      const res = await fetch(`${API_URL}/api/products/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedPayload),
-      });
+      // ✅ API Utility ব্যবহার করুন (যা automatically token পাঠাবে)
+      const result = await patchData(`/api/products/${id}`, updatedPayload);
 
-      const result = await res.json();
+      console.log('✅ Update result:', result);
 
-      if (res.ok && result.success) {
+      if (result.success) {
         toast.success('Artifact successfully updated!', { id: loadingToast });
         setTimeout(() => router.push('/dashboard/user/my-list'), 1500);
       } else {
@@ -248,7 +240,6 @@ const EditProductPage = () => {
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* ✅ Price ফিল্ড - type="text" ব্যবহার করুন */}
               <div className="space-y-2">
                 <label className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-400 tracking-widest ml-1">
                   Adjusted Price ($)
