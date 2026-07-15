@@ -13,15 +13,23 @@ import {
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 import FavDeleteModal from './FavDeleteModal';
+import { useRouter } from 'next/navigation';
 
 const MyFavoritePage = () => {
-  const { data: session } = authClient.useSession();
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+    const { data: session, isPending } = authClient.useSession();
+    const router = useRouter();
+  
+    useEffect(() => {
+      if (!isPending && !session) {
+        router.replace('/login');
+      }
+    }, [session, isPending, router]);
 
   const fetchFavorites = async () => {
     if (!session?.user?.id) return;

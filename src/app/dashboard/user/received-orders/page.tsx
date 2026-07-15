@@ -3,11 +3,20 @@ import React, { useEffect, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
 import { User, Mail, Calendar, Package, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const ReceivedOrders = () => {
-  const { data: session } = authClient.useSession();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/login');
+    }
+  }, [session, isPending, router]);
 
   useEffect(() => {
     const fetchOrders = async () => {

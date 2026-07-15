@@ -12,15 +12,24 @@ import {
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 import DeleteOrderModal from './DeleteOrderModal';
+import { useRouter } from 'next/navigation';
 
 const MyOrderPage = () => {
-  const { data: session } = authClient.useSession();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
+    const { data: session, isPending } = authClient.useSession();
+    const router = useRouter();
+
+    useEffect(() => {
+      if (!isPending && !session) {
+        router.replace('/login');
+      }
+    }, [session, isPending, router]);
 
   /**
    * Fetch all buy requests sent by the current user

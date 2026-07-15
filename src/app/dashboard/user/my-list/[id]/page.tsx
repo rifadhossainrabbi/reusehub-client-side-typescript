@@ -13,6 +13,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { authClient } from '@/lib/auth-client';
 
 interface IProductForm {
   title: string;
@@ -25,7 +26,6 @@ interface IProductForm {
 
 const EditProductPage = () => {
   const { id } = useParams();
-  const router = useRouter();
 
   const {
     register,
@@ -49,6 +49,15 @@ const EditProductPage = () => {
 
   const IMGBB_API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/login');
+    }
+  }, [session, isPending, router]);
 
   useEffect(() => {
     const fetchProduct = async () => {

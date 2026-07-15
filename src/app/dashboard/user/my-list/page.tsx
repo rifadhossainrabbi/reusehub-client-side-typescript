@@ -13,9 +13,9 @@ import {
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 import DeleteConfirmModal from './DeleteConfiramtionModal';
+import { useRouter } from 'next/navigation';
 
 const MyProductList = () => {
-  const { data: session } = authClient.useSession();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,6 +26,15 @@ const MyProductList = () => {
   // Modal States
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+    const { data: session, isPending } = authClient.useSession();
+    const router = useRouter();
+
+    useEffect(() => {
+      if (!isPending && !session) {
+        router.replace('/login');
+      }
+    }, [session, isPending, router]);
 
   const fetchMyProducts = async (page: number) => {
     if (!session?.user?.id) return;

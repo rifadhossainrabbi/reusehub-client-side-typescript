@@ -124,7 +124,7 @@ const Navbar: React.FC = () => {
     await authClient.signOut();
     setIsProfileOpen(false);
     setIsMobileOpen(false);
-    router.push('/');
+    // router.push('/');
   };
 
   const getInitials = (name: string) =>

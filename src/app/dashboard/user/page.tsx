@@ -32,14 +32,23 @@ import {
 import Link from 'next/link';
 import { authClient } from '@/lib/auth-client';
 import toast, { Toaster } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const DashboardUserHomePage = () => {
-  const { data: session } = authClient.useSession();
   const [intel, setIntel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
 
   const COLORS = ['#2563eb', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444'];
+
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/login');
+    }
+  }, [session, isPending, router]);
 
   useEffect(() => {
     setIsMounted(true);

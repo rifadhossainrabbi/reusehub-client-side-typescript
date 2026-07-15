@@ -53,7 +53,9 @@ const ProductDetailsById = () => {
       try {
         setLoading(true);
         // 1. Get Main Product Data
-        const res = await fetch(`http://localhost:5000/api/products/${id}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/products/${id}`,
+        );
         const data = await res.json();
         setProduct(data);
         setSelectedImg(data.imageUrl);
@@ -91,18 +93,21 @@ const ProductDetailsById = () => {
       return toast.error('Identification required to save artifacts!');
 
     try {
-      const res = await fetch(`http://localhost:5000/api/favorites/toggle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: session.user.id,
-          productId: product._id,
-          title: product.title,
-          imageUrl: product.imageUrl,
-          price: product.price,
-          category: product.category,
-        }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/favorites/toggle`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: session.user.id,
+            productId: product._id,
+            title: product.title,
+            imageUrl: product.imageUrl,
+            price: product.price,
+            category: product.category,
+          }),
+        },
+      );
       const data = await res.json();
 
       if (res.ok) {
@@ -139,7 +144,7 @@ const ProductDetailsById = () => {
     };
 
     try {
-      const res = await fetch(`http://localhost:5000/api/orders`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData),
