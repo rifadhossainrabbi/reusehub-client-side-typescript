@@ -15,6 +15,8 @@ import {
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 import DeleteConfirmModal from '../../user/my-list/DeleteConfiramtionModal';
+import { authClient } from '@/lib/auth-client';
+import { useRouter } from 'next/navigation';
 
 const ManageProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -28,6 +30,15 @@ const ManageProducts = () => {
   // Modal States
   const [modalOpen, setModalOpen] = useState(false);
   const [productToPurge, setProductToPurge] = useState<any>(null);
+
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/login');
+    }
+  }, [session, isPending, router]);
 
   /**
    * Fetch artifacts with pagination support

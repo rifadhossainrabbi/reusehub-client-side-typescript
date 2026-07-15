@@ -17,16 +17,25 @@ import {
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 const AdminProfilePage = () => {
-  const { data: session } = authClient.useSession();
-  const user = session?.user;
-
   // States
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [systemStats, setStats] = useState({ users: 0, products: 0 });
   const [formData, setFormData] = useState({ name: '', image: '' });
+
+  const { data: session, isPending } = authClient.useSession();
+  const user = session?.user;
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/login');
+    }
+  }, [session, isPending, router]);
 
   // Load user data and system stats
   useEffect(() => {

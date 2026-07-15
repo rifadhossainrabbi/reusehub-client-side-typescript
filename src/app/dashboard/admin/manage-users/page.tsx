@@ -16,6 +16,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { authClient } from '@/lib/auth-client';
 import PromoteAdminModal from './PromoteAdminModal';
 import DeleteUserModal from './DeleteUsersModa'; // Ensure the file name is correct
+import { useRouter } from 'next/navigation';
 
 const ManageUsers = () => {
   // --- STATES ---
@@ -29,6 +30,15 @@ const ManageUsers = () => {
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/login');
+    }
+  }, [session, isPending, router]);
 
   /**
    * Fetch users from sanctuary archives with pagination
