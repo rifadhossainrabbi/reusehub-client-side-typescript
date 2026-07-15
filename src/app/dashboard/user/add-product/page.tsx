@@ -14,6 +14,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast'; // Toaster ইম্পোর্ট নিশ্চিত করুন
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
+import { postData } from '@/lib/api';
 
 // Form Data Type
 interface IProductForm {
@@ -61,75 +62,64 @@ const AddProductPage = () => {
     setValue('image', null as any); // Form state রিসেট
   };
 
-  const onSubmit = async (data: IProductForm) => {
-    if (!previewImage) return toast.error('Please select a product image!');
+const onSubmit = async (data: IProductForm) => {
+  if (!previewImage) return toast.error('Please select a product image!');
 
-    setIsUploading(true);
-    const loadingToast = toast.loading(
-      'Listing your gadget in the sanctuary...',
+  setIsUploading(true);
+  const loadingToast = toast.loading('Listing your gadget in the sanctuary...');
+
+  try {
+    // ১. ImgBB-তে ইমেজ আপলোড (এটি থার্ড পার্টি API তাই আগের মতোই থাকবে)
+    const imageFile = data.image[0];
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const imgResponse = await fetch(
+      `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
+      {
+        method: 'POST',
+        body: formData,
+      },
     );
+    const imgData = await imgResponse.json();
 
-    try {
-      // ১. ImgBB-তে ইমেজ আপলোড
-      const imageFile = data.image[0];
-      const formData = new FormData();
-      formData.append('image', imageFile);
+    if (!imgData.success) throw new Error('ImgBB upload failed');
 
-      const imgResponse = await fetch(
-        `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
-        {
-          method: 'POST',
-          body: formData,
-        },
-      );
-      const imgData = await imgResponse.json();
+    // ২. আপনার ব্যাকেন্ডের জন্য ডাটা প্রস্তুত করা
+    const productData = {
+      title: data.title,
+      shortDescription: data.shortDescription,
+      fullDescription: data.fullDescription,
+      status: 'pending',
+      price: parseFloat(data.price),
+      category: data.category,
+      imageUrl: imgData.data.url,
+      seller: {
+        name: session?.user?.name,
+        email: session?.user?.email,
+        id: session?.user?.id,
+      },
+    };
 
-      if (!imgData.success) throw new Error('ImgBB upload failed');
+    // ৩. আপনার api.ts এর postData ব্যবহার করে ব্যাকেন্ডে পাঠানো
+    // এখানে URL এবং Header এর ঝামেলা api.ts নিজে হ্যান্ডেল করবে
+    await postData('/api/products', productData);
 
-      // ২. ব্যাকেন্ডে ডাটা পাঠানো (সঠিক URL ব্যবহার নিশ্চিত করুন)
-      const productData = {
-        title: data.title,
-        shortDescription: data.shortDescription,
-        fullDescription: data.fullDescription,
-        status: 'pending',
-        price: parseFloat(data.price),
-        category: data.category,
-        imageUrl: imgData.data.url,
-        seller: {
-          name: session?.user?.name,
-          email: session?.user?.email,
-          id: session?.user?.id,
-        },
-      };
-
-      // আপনার .env এ NEXT_PUBLIC_API_URL=http://localhost:5000 হতে হবে
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/products`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(productData),
-        },
-      );
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Server rejected the product');
-      }
-
-      toast.success('Product listed successfully!', { id: loadingToast });
-      reset();
-      setPreviewImage(null);
-      router.push('/dashboard/user/my-list');
-    } catch (error: any) {
-      console.error('Submission Error:', error);
-      toast.error(error.message || 'Something went wrong!', {
-        id: loadingToast,
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
+    // সফল হলে পরবর্তী ধাপগুলো
+    toast.success('Product listed successfully!', { id: loadingToast });
+    reset();
+    setPreviewImage(null);
+    router.push('/dashboard/user/my-list');
+  } catch (error: any) {
+    console.error('Submission Error:', error);
+    // api.ts থেকে আসা নির্দিষ্ট এরর মেসেজ দেখাবে
+    toast.error(error.message || 'Something went wrong!', {
+      id: loadingToast,
+    });
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   return (
     <div className="space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
