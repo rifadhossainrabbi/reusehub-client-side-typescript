@@ -4,6 +4,7 @@ import { authClient } from '@/lib/auth-client';
 import { User, Mail, Calendar, Package, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { getData, patchData } from '@/lib/api'; // patchData অ্যাড করা হয়েছে
 
 const ReceivedOrders = () => {
   const [orders, setOrders] = useState<any[]>([]);
@@ -18,23 +19,39 @@ const ReceivedOrders = () => {
     }
   }, [session, isPending, router]);
 
+  // ডাটা ফেচিং ফাংশন (সাইলেন্ট রিফ্রেশ সাপোর্ট সহ)
+  const fetchOrders = async (isSilent = false) => {
+    if (!session?.user?.id) return;
+    try {
+      if (!isSilent) setLoading(true);
+      const data = await getData(`/api/orders/received/${session.user.id}`);
+      setOrders(data);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load requests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchOrders = async () => {
-      if (!session?.user?.id) return;
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/orders/received/${session.user.id}`,
-        );
-        const data = await res.json();
-        setOrders(data);
-      } catch (err) {
-        toast.error('Failed to load requests');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchOrders();
   }, [session]);
+
+  /**
+   * নতুন অ্যাকশন হ্যান্ডলার (Accept/Reject)
+   */
+  const handleOrderAction = async (
+    id: string,
+    action: 'accepted' | 'rejected',
+  ) => {
+    try {
+      const res = await patchData(`/api/orders/action/${id}`, { action });
+      toast.success(res.message);
+      fetchOrders(true); // লিস্ট সাইলেন্টলি রিফ্রেশ হবে
+    } catch (err: any) {
+      toast.error(err.message || 'Action failed');
+    }
+  };
 
   if (loading)
     return (
@@ -69,7 +86,6 @@ const ReceivedOrders = () => {
               key={order._id}
               className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center gap-8 group hover:shadow-md transition-all"
             >
-              {/* Product Thumbnail */}
               <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 bg-slate-50 dark:bg-slate-950">
                 <img
                   src={order.imageUrl}
@@ -78,7 +94,6 @@ const ReceivedOrders = () => {
                 />
               </div>
 
-              {/* Order Details */}
               <div className="flex-1 space-y-2 text-center md:text-left">
                 <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter">
                   {order.title}
@@ -88,7 +103,6 @@ const ReceivedOrders = () => {
                 </p>
               </div>
 
-              {/* Seeker (Buyer) Info */}
               <div className="flex flex-col md:flex-row gap-6 md:gap-12 items-center border-t md:border-t-0 md:border-l dark:border-slate-800 pt-6 md:pt-0 md:pl-12">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
@@ -113,9 +127,32 @@ const ReceivedOrders = () => {
                 </div>
               </div>
 
-              <button className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">
-                Approve & Chat
-              </button>
+              {/* --- অ্যাকশন সেকশন (এখানেই পরিবর্তন করা হয়েছে) --- */}
+              <div className="flex gap-2">
+                {!order.fulfillmentStatus ||
+                order.fulfillmentStatus === 'pending' ? (
+                  <>
+                    <button
+                      onClick={() => handleOrderAction(order._id, 'accepted')}
+                      className="bg-blue-700 hover:bg-blue-800 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all cursor-pointer"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleOrderAction(order._id, 'rejected')}
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-600 px-6 py-3 rounded-xl font-black text-[10px] uppercase cursor-pointer transition-all"
+                    >
+                      Reject
+                    </button>
+                  </>
+                ) : (
+                  <div
+                    className={`px-8 py-3 rounded-xl font-black text-[10px] uppercase border ${order.fulfillmentStatus === 'accepted' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}
+                  >
+                    Request {order.fulfillmentStatus}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>

@@ -7,7 +7,9 @@ import {
   Eye,
   Calendar,
   Loader2,
-  ArrowUpRight,
+  CheckCircle, // যোগ করা হয়েছে
+  XCircle, // যোগ করা হয়েছে
+  Clock, // যোগ করা হয়েছে
 } from 'lucide-react';
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
@@ -127,7 +129,24 @@ const MyOrderPage = () => {
               key={order._id}
               className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all group relative"
             >
-              {/* Image Section (Clickable) */}
+              {/* --- ডাইনামিক স্টেটাস ব্যাজ লজিক (এখানেই পরিবর্তন করা হয়েছে) --- */}
+              <div className="absolute top-4 left-4 z-10">
+                {order.fulfillmentStatus === 'accepted' ? (
+                  <span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1 shadow-lg shadow-emerald-500/20">
+                    <CheckCircle size={10} /> Accepted
+                  </span>
+                ) : order.fulfillmentStatus === 'rejected' ? (
+                  <span className="bg-rose-600 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase flex items-center gap-1 shadow-lg shadow-rose-600/20">
+                    <XCircle size={10} /> Rejected
+                  </span>
+                ) : (
+                  <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black text-blue-700 uppercase tracking-widest border dark:border-slate-700 flex items-center gap-1">
+                    <Clock size={10} /> PENDING APPROVAL
+                  </div>
+                )}
+              </div>
+
+              {/* Image Section (Design Unchanged) */}
               <Link
                 href={`/explore/${order.productId}`}
                 className="relative h-56 block overflow-hidden bg-slate-50 dark:bg-slate-950 cursor-pointer"
@@ -137,18 +156,14 @@ const MyOrderPage = () => {
                   alt="gear"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
-                <div className="absolute top-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black text-blue-700 uppercase tracking-widest border dark:border-slate-700">
-                  PENDING APPROVAL
-                </div>
               </Link>
 
-              {/* Content Section */}
+              {/* Content Section (Design Unchanged) */}
               <div className="p-8 space-y-5">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">
                     {order.category || 'Gadget'}
                   </p>
-                  {/* Name (Clickable) */}
                   <Link
                     href={`/explore/${order.productId}`}
                     className="block group/title cursor-pointer"
@@ -169,7 +184,7 @@ const MyOrderPage = () => {
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Actions (Design Unchanged) */}
                 <div className="flex gap-3 pt-2">
                   <Link href={`/explore/${order.productId}`} className="flex-1">
                     <button className="w-full py-4 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 transition-all cursor-pointer flex items-center justify-center gap-2">

@@ -14,6 +14,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { patchData } from '@/lib/api';
 
 const UserProfile = () => {
   const { data: session, isPending } = authClient.useSession();
@@ -46,30 +47,39 @@ const UserProfile = () => {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ১. আইডি ভ্যালিডেশন
+    if (!user?.id) {
+      return toast.error('Seeker identity not found. Please re-login.');
+    }
+
     setLoading(true);
     const loadingToast = toast.loading('Updating sanctuary records...');
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/${user?.id}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        },
-      );
-      const data = await res.json();
+      // ২. শুধুমাত্র প্রয়োজনীয় ডাটা পেলোড হিসেবে পাঠানো
+      const payload = {
+        name: formData.name,
+        image: formData.image,
+      };
 
-      if (res.ok) {
-        toast.success(data.message, { id: loadingToast });
-        setIsEditing(false);
-        // সেশন রিফ্রেশ করার জন্য পেজ রিলোড করা ভালো প্র্যাকটিস
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        toast.error(data.message, { id: loadingToast });
-      }
-    } catch (err) {
-      toast.error('Connection failed', { id: loadingToast });
+      // ৩. patchData ইউটিলিটি ব্যবহার করা হয়েছে
+      const result = await patchData(`/api/users/${user.id}`, payload);
+
+      toast.success(result.message || 'Identity updated successfully!', {
+        id: loadingToast,
+      });
+      setIsEditing(false);
+
+      // ৪. ব্রাউজার সেশন রিফ্রেশ করার জন্য ১.৫ সেকেন্ড পর রিলোড
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      // সার্ভারের আসল এরর মেসেজ দেখাবে
+      toast.error(err.message || 'Connection protocol failed', {
+        id: loadingToast,
+      });
     } finally {
       setLoading(false);
     }
