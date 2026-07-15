@@ -14,6 +14,7 @@ import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 import FavDeleteModal from './FavDeleteModal';
 import { useRouter } from 'next/navigation';
+import { deleteData, getData } from '@/lib/api';
 
 const MyFavoritePage = () => {
   const [favorites, setFavorites] = useState<any[]>([]);
@@ -22,25 +23,25 @@ const MyFavoritePage = () => {
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
-    const { data: session, isPending } = authClient.useSession();
-    const router = useRouter();
-  
-    useEffect(() => {
-      if (!isPending && !session) {
-        router.replace('/login');
-      }
-    }, [session, isPending, router]);
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
 
-  const fetchFavorites = async () => {
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/login');
+    }
+  }, [session, isPending, router]);
+
+  const fetchFavorites = async (isSilent = false) => {
     if (!session?.user?.id) return;
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/favorites/${session.user.id}`,
-      );
-      const data = await res.json();
+      // যদি সাইলেন্ট না হয় তবেই ফুল স্ক্রিন লোডার দেখাবে
+      if (!isSilent) setLoading(true);
+
+      const data = await getData(`/api/favorites/${session.user.id}`);
       setFavorites(data);
-    } catch (err) {
-      toast.error('Wishlist sync failed');
+    } catch (err: any) {
+      toast.error(err.message || 'Wishlist sync failed');
     } finally {
       setLoading(false);
     }
@@ -58,17 +59,16 @@ const MyFavoritePage = () => {
   const handleConfirmDelete = async () => {
     if (!selectedItem) return;
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/favorites/${selectedItem._id}`,
-        { method: 'DELETE' },
-      );
-      if (res.ok) {
-        setFavorites(favorites.filter(fav => fav._id !== selectedItem._id));
-        toast.success('Artifact removed from wishlist');
-        setIsModalOpen(false);
-      }
-    } catch (err) {
-      toast.error('Removal protocol failed');
+      // deleteData ব্যবহার করা হয়েছে
+      await deleteData(`/api/favorites/${selectedItem._id}`);
+
+      toast.success('Artifact removed from wishlist');
+      setIsModalOpen(false);
+
+      // ডিলিট করার পর সাইলেন্ট রিফ্রেশ (লোডার ছাড়া)
+      fetchFavorites(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Removal protocol failed');
     }
   };
 

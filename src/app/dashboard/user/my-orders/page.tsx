@@ -13,6 +13,7 @@ import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 import DeleteOrderModal from './DeleteOrderModal';
 import { useRouter } from 'next/navigation';
+import { deleteData, getData } from '@/lib/api';
 
 const MyOrderPage = () => {
   const [orders, setOrders] = useState<any[]>([]);
@@ -22,28 +23,27 @@ const MyOrderPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
-    const { data: session, isPending } = authClient.useSession();
-    const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
 
-    useEffect(() => {
-      if (!isPending && !session) {
-        router.replace('/login');
-      }
-    }, [session, isPending, router]);
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/login');
+    }
+  }, [session, isPending, router]);
 
   /**
    * Fetch all buy requests sent by the current user
    */
-  const fetchMyOrders = async () => {
+  const fetchMyOrders = async (isSilent = false) => {
     if (!session?.user?.id) return;
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/orders/my-orders/${session.user.id}`,
-      );
-      const data = await res.json();
+      if (!isSilent) setLoading(true);
+      // getData ব্যবহার করা হয়েছে
+      const data = await getData(`/api/orders/my-orders/${session.user.id}`);
       setOrders(data);
-    } catch (err) {
-      toast.error('Archive sync failed');
+    } catch (err: any) {
+      toast.error(err.message || 'Archive sync failed');
     } finally {
       setLoading(false);
     }
@@ -63,19 +63,16 @@ const MyOrderPage = () => {
   const confirmCancelOrder = async () => {
     if (!selectedOrder) return;
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/orders/${selectedOrder._id}`,
-        {
-          method: 'DELETE',
-        },
-      );
-      if (res.ok) {
-        setOrders(orders.filter(o => o._id !== selectedOrder._id));
-        toast.success('Purchase request revoked');
-        setIsModalOpen(false);
-      }
-    } catch (err) {
-      toast.error('Failed to cancel request');
+      // deleteData ব্যবহার করা হয়েছে
+      await deleteData(`/api/orders/${selectedOrder._id}`);
+
+      toast.success('Purchase request revoked');
+      setIsModalOpen(false);
+
+      // সাইলেন্টলি লিস্ট রিফ্রেশ করা (লোডার ছাড়া)
+      fetchMyOrders(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel request');
     }
   };
 
