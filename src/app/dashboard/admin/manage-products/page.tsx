@@ -7,54 +7,65 @@ import {
   Star,
   Search,
   Loader2,
-  Mail,
-  ExternalLink,
-  Box,
   Tag,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
 } from 'lucide-react';
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
-import ProductModalDelete from './ProductDeleteModal';
+import DeleteConfirmModal from '../../user/my-list/DeleteConfiramtionModal';
 
 const ManageProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
+  // Pagination States
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
   // Modal States
   const [modalOpen, setModalOpen] = useState(false);
   const [productToPurge, setProductToPurge] = useState<any>(null);
 
-  const fetchAllProducts = async () => {
+  /**
+   * Fetch artifacts with pagination support
+   */
+  const fetchProducts = async (pageNum: number) => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:5000/api/admin/products`);
+      const res = await fetch(
+        `http://localhost:5000/api/admin/products?page=${pageNum}`,
+      );
       const data = await res.json();
-      setProducts(data);
+      setProducts(data.products || []);
+      setTotalPages(data.totalPages || 1);
     } catch (err) {
-      toast.error('Sanctuary sync failed');
+      toast.error('Archive synchronization failed');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAllProducts();
-  }, []);
+    fetchProducts(page);
+  }, [page]);
 
-  const handleStatusUpdate = async (
-    id: string,
-    action: 'approve' | 'feature',
-  ) => {
+  /**
+   * Handle Status/Featured Toggle
+   */
+  const handleToggle = async (id: string, action: 'approve' | 'feature') => {
     const endpoint = action === 'approve' ? `approve/${id}` : `feature/${id}`;
     try {
       const res = await fetch(
         `http://localhost:5000/api/admin/products/${endpoint}`,
         { method: 'PATCH' },
       );
+      const data = await res.json();
       if (res.ok) {
-        toast.success(`Protocol updated successfully`);
-        fetchAllProducts();
+        toast.success(data.message || 'Protocol updated');
+        fetchProducts(page); // Refresh current view
       }
     } catch (err) {
       toast.error('Sync failed');
@@ -74,15 +85,16 @@ const ManageProducts = () => {
         { method: 'DELETE' },
       );
       if (res.ok) {
-        toast.success('Product and all associated logs erased');
+        toast.success('Artifact erased from logs');
         setModalOpen(false);
-        fetchAllProducts();
+        fetchProducts(page);
       }
     } catch (err) {
       toast.error('Purge failed');
     }
   };
 
+  // Local Search Filter
   const filteredProducts = products.filter(p =>
     p.title.toLowerCase().includes(search.toLowerCase()),
   );
@@ -91,16 +103,16 @@ const ManageProducts = () => {
     return (
       <div className="h-screen flex flex-col items-center justify-center space-y-4">
         <Loader2 className="animate-spin text-blue-600" size={48} />
-        <p className="font-black uppercase tracking-[0.3em] text-slate-400">
-          Indexing Artifacts...
+        <p className="font-black uppercase tracking-[0.4em] text-slate-400">
+          Indexing Archives...
         </p>
       </div>
     );
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 pb-20 px-2">
+    <div className="space-y-10 pb-20 px-2 animate-in fade-in duration-700">
       <Toaster position="top-right" />
-      <ProductModalDelete
+      <DeleteConfirmModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onConfirm={confirmPurge}
@@ -110,10 +122,10 @@ const ManageProducts = () => {
       <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b dark:border-slate-800 pb-8">
         <div className="space-y-2">
           <h1 className="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-            Artifact Archives
+            Product Control
           </h1>
           <p className="text-slate-500 font-medium">
-            Monitoring and moderating {products.length} listed artifacts.
+            Moderating sanctuary artifacts across {totalPages} pages.
           </p>
         </div>
         <div className="relative w-full lg:w-96">
@@ -123,7 +135,7 @@ const ManageProducts = () => {
           />
           <input
             type="text"
-            placeholder="Search by artifact title..."
+            placeholder="Filter current view..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold transition-all shadow-sm"
@@ -131,14 +143,15 @@ const ManageProducts = () => {
         </div>
       </header>
 
+      {/* Artifacts Table */}
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b dark:border-slate-800">
-                <th className="px-8 py-6">Product Artifact</th>
-                <th className="px-6 py-6 text-center">Status</th>
-                <th className="px-6 py-6 text-center">Pricing</th>
+              <tr className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] border-b dark:border-slate-800">
+                <th className="px-8 py-6">Gadget Metadata</th>
+                <th className="px-6 py-6 text-center">Protocol Status</th>
+                <th className="px-6 py-6 text-center">Value</th>
                 <th className="px-8 py-6 text-right">Moderation</th>
               </tr>
             </thead>
@@ -187,32 +200,25 @@ const ManageProducts = () => {
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex justify-end gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
-                      {/* Approve Button */}
                       {product.status !== 'approved' && (
                         <button
-                          onClick={() =>
-                            handleStatusUpdate(product._id, 'approve')
-                          }
+                          onClick={() => handleToggle(product._id, 'approve')}
                           className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-emerald-600 rounded-xl transition-all cursor-pointer shadow-sm"
                           title="Approve Listing"
                         >
                           <CheckCircle size={18} />
                         </button>
                       )}
-                      {/* Feature Button */}
                       <button
-                        onClick={() =>
-                          handleStatusUpdate(product._id, 'feature')
-                        }
+                        onClick={() => handleToggle(product._id, 'feature')}
                         className={`p-3 rounded-xl transition-all cursor-pointer shadow-sm ${product.isFeatured ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-600'}`}
-                        title="Feature Product"
+                        title="Toggle Featured"
                       >
                         <Star
                           size={18}
                           fill={product.isFeatured ? 'currentColor' : 'none'}
                         />
                       </button>
-                      {/* Delete Button */}
                       <button
                         onClick={() => openPurgeModal(product)}
                         className="p-3 bg-slate-100 dark:bg-slate-800 text-rose-400 hover:bg-rose-50 rounded-xl transition-all cursor-pointer shadow-sm"
@@ -227,6 +233,38 @@ const ManageProducts = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col items-center gap-6 pt-10">
+        <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage(p => p - 1)}
+            className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl disabled:opacity-20 hover:text-blue-600 transition-all cursor-pointer"
+          >
+            <ChevronLeft size={24} />
+          </button>
+
+          <div className="flex items-center gap-2 px-4">
+            <span className="text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-5 py-2 rounded-xl font-black text-sm">
+              {page}
+            </span>
+            <span className="text-slate-300 font-bold">of</span>
+            <span className="text-slate-500 font-bold">{totalPages}</span>
+          </div>
+
+          <button
+            disabled={page === totalPages}
+            onClick={() => setPage(p => p + 1)}
+            className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl disabled:opacity-20 hover:text-blue-600 transition-all cursor-pointer"
+          >
+            <ChevronRight size={24} />
+          </button>
+        </div>
+        <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em]">
+          Administrator Navigation Archives
+        </p>
       </div>
     </div>
   );
