@@ -17,6 +17,7 @@ import { authClient } from '@/lib/auth-client';
 import PromoteAdminModal from './PromoteAdminModal';
 import DeleteUserModal from './DeleteUsersModa'; // Ensure the file name is correct
 import { useRouter } from 'next/navigation';
+import { deleteData, getData, patchData } from '@/lib/api';
 
 const ManageUsers = () => {
   // --- STATES ---
@@ -43,13 +44,14 @@ const ManageUsers = () => {
   /**
    * Fetch users from sanctuary archives with pagination
    */
-  const fetchUsers = async (pageNum: number) => {
+  /**
+   * Fetch users from sanctuary archives with pagination
+   */
+  const fetchUsers = async (pageNum: number, showLoader = true) => {
     try {
-      setLoading(true);
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users?page=${pageNum}`,
-      );
-      const data = await res.json();
+      if (showLoader) setLoading(true); // শুধু প্রথমবার লোডার দেখাবে
+
+      const data = await getData(`/api/admin/users?page=${pageNum}`);
       setUsers(data.users || []);
       setTotalPages(data.totalPages || 1);
     } catch (err) {
@@ -60,57 +62,42 @@ const ManageUsers = () => {
   };
 
   useEffect(() => {
-    fetchUsers(page);
+    fetchUsers(page, true); // প্রথমে লোডার দেখাবে
   }, [page]);
 
-  // --- ACTION HANDLERS ---
-
-  // Handle Role Toggle (User <-> Admin)
+  // Handle Role Toggle
   const handleToggleRole = async () => {
     if (!selectedUser) return;
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/toggle-role/${selectedUser._id}`,
-        {
-          method: 'PATCH',
-        },
+      const data = await patchData(
+        `/api/admin/users/toggle-role/${selectedUser._id}`,
+        {},
       );
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message);
-        setIsPromoteModalOpen(false);
-        fetchUsers(page);
-      } else {
-        toast.error(data.message);
-      }
-    } catch (err) {
-      toast.error('Role synchronization failed');
+
+      toast.success(data.message);
+      setIsPromoteModalOpen(false);
+      fetchUsers(page, false); // সাইলেন্ট আপডেট
+    } catch (err: any) {
+      // এখানে সার্ভারের পাঠানো আসল মেসেজটি দেখাবে
+      toast.error(err.message || 'Role synchronization failed');
     }
   };
 
-  // Handle Account Purge (Cascade Deletion)
+  // Handle Account Purge
   const handlePurgeAccount = async () => {
     if (!selectedUser) return;
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${selectedUser._id}`,
-        {
-          method: 'DELETE',
-        },
-      );
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message);
-        setIsDeleteModalOpen(false);
-        fetchUsers(page);
-      } else {
-        toast.error(data.message);
-      }
-    } catch (err) {
-      toast.error('Master purge protocol failed');
+      const data = await deleteData(`/api/admin/users/${selectedUser._id}`);
+
+      toast.success(data.message);
+      setIsDeleteModalOpen(false);
+
+      // ডিলিট করার পর লোডার ছাড়া ফেচ করবে (false পাঠানো হয়েছে)
+      fetchUsers(page, false);
+    } catch (err: any) {
+      toast.error(err.message || 'Master purge protocol failed');
     }
   };
-
   // Local filtering for search bar
   const filteredUsers = users.filter(
     u =>

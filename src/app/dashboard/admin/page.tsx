@@ -34,6 +34,7 @@ import {
 import Link from 'next/link';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
+import { getData } from '@/lib/api';
 
 const AdminDashboardHomePage = () => {
   const [data, setData] = useState<any>(null);
@@ -54,18 +55,8 @@ const AdminDashboardHomePage = () => {
     setIsMounted(true);
     const fetchAdminData = async () => {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/admin/dashboard-stats`,
-        );
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => null);
-          throw new Error(
-            errBody?.detail ||
-              errBody?.message ||
-              `Server responded with ${res.status}`,
-          );
-        }
-        const result = await res.json();
+        const result = await getData('/api/admin/dashboard-stats');
+
         if (!result?.summary) {
           throw new Error('Malformed analytics payload');
         }

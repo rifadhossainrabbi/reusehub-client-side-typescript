@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Trash2,
-  Eye,
   CheckCircle,
   Star,
   Search,
@@ -10,24 +9,20 @@ import {
   Tag,
   ChevronLeft,
   ChevronRight,
-  LayoutGrid,
 } from 'lucide-react';
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 import DeleteConfirmModal from '../../user/my-list/DeleteConfiramtionModal';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
+import { deleteData, getData, patchData } from '@/lib/api';
 
 const ManageProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-
-  // Pagination States
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  // Modal States
   const [modalOpen, setModalOpen] = useState(false);
   const [productToPurge, setProductToPurge] = useState<any>(null);
 
@@ -40,16 +35,11 @@ const ManageProducts = () => {
     }
   }, [session, isPending, router]);
 
-  /**
-   * Fetch artifacts with pagination support
-   */
-  const fetchProducts = async (pageNum: number) => {
+  // fetchProducts আপডেট করা হয়েছে
+  const fetchProducts = async (pageNum: number, showLoader = true) => {
     try {
-      setLoading(true);
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products?page=${pageNum}`,
-      );
-      const data = await res.json();
+      if (showLoader) setLoading(true);
+      const data = await getData(`/api/admin/products?page=${pageNum}`);
       setProducts(data.products || []);
       setTotalPages(data.totalPages || 1);
     } catch (err) {
@@ -63,23 +53,26 @@ const ManageProducts = () => {
     fetchProducts(page);
   }, [page]);
 
-  /**
-   * Handle Status/Featured Toggle
-   */
   const handleToggle = async (id: string, action: 'approve' | 'feature') => {
     const endpoint = action === 'approve' ? `approve/${id}` : `feature/${id}`;
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${endpoint}`,
-        { method: 'PATCH' },
-      );
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message || 'Protocol updated');
-        fetchProducts(page); // Refresh current view
-      }
+      const data = await patchData(`/api/admin/products/${endpoint}`, {});
+      toast.success(data.message || 'Protocol updated');
+      fetchProducts(page, false); // সাইলেন্ট আপডেট
     } catch (err) {
       toast.error('Sync failed');
+    }
+  };
+
+  const confirmPurge = async () => {
+    if (!productToPurge) return;
+    try {
+      await deleteData(`/api/admin/products/${productToPurge._id}`);
+      toast.success('Artifact erased from logs');
+      setModalOpen(false);
+      fetchProducts(page, false); // সাইলেন্ট আপডেট
+    } catch (err) {
+      toast.error('Purge failed');
     }
   };
 
@@ -88,24 +81,6 @@ const ManageProducts = () => {
     setModalOpen(true);
   };
 
-  const confirmPurge = async () => {
-    if (!productToPurge) return;
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/products/${productToPurge._id}`,
-        { method: 'DELETE' },
-      );
-      if (res.ok) {
-        toast.success('Artifact erased from logs');
-        setModalOpen(false);
-        fetchProducts(page);
-      }
-    } catch (err) {
-      toast.error('Purge failed');
-    }
-  };
-
-  // Local Search Filter
   const filteredProducts = products.filter(p =>
     p.title.toLowerCase().includes(search.toLowerCase()),
   );
@@ -154,7 +129,6 @@ const ManageProducts = () => {
         </div>
       </header>
 
-      {/* Artifacts Table */}
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -213,6 +187,7 @@ const ManageProducts = () => {
                     <div className="flex justify-end gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
                       {product.status !== 'approved' && (
                         <button
+                          type="button"
                           onClick={() => handleToggle(product._id, 'approve')}
                           className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-emerald-600 rounded-xl transition-all cursor-pointer shadow-sm"
                           title="Approve Listing"
@@ -246,7 +221,6 @@ const ManageProducts = () => {
         </div>
       </div>
 
-      {/* Pagination Controls */}
       <div className="flex flex-col items-center gap-6 pt-10">
         <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <button
@@ -256,7 +230,6 @@ const ManageProducts = () => {
           >
             <ChevronLeft size={24} />
           </button>
-
           <div className="flex items-center gap-2 px-4">
             <span className="text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-5 py-2 rounded-xl font-black text-sm">
               {page}
@@ -264,7 +237,6 @@ const ManageProducts = () => {
             <span className="text-slate-300 font-bold">of</span>
             <span className="text-slate-500 font-bold">{totalPages}</span>
           </div>
-
           <button
             disabled={page === totalPages}
             onClick={() => setPage(p => p + 1)}
@@ -273,9 +245,6 @@ const ManageProducts = () => {
             <ChevronRight size={24} />
           </button>
         </div>
-        <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em]">
-          Administrator Navigation Archives
-        </p>
       </div>
     </div>
   );
