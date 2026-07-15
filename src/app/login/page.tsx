@@ -19,6 +19,20 @@ const LoginPage = () => {
     formState: { errors },
   } = useForm();
 
+ const handleDemoAdminLogin = async () => {
+   const { error } = await authClient.signIn.email({
+     email: 'evan@downey.com',
+     password: 'robertDowney1!',
+     callbackURL: '/',
+   });
+
+   if (error) {
+     toast.error(error.message || 'Demo login failed');
+   } else {
+     toast.success('Logged in as Demo Admin');
+   }
+ };
+
   const onSubmit = async (data: any) => {
     setIsLoading(true);
     const { error } = await authClient.signIn.email({
@@ -115,6 +129,13 @@ const LoginPage = () => {
               className="w-full bg-blue-600 dark:bg-gradient-to-r dark:from-blue-600 dark:to-purple-600 hover:opacity-95 text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all shadow-xl active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               {isLoading ? 'Authenticating...' : 'Sign In'}
+            </button>
+            <button
+              type="button"
+              onClick={handleDemoAdminLogin}
+              className="w-full mt-3 rounded-xl bg-blue-600 py-3 hover:cursor-pointer font-bold text-white hover:bg-blue-700"
+            >
+              👑 Demo Login
             </button>
           </form>
 
