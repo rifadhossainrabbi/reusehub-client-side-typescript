@@ -38,7 +38,7 @@ const LoginPage = () => {
     const { error } = await authClient.signIn.email({
       email: data.email,
       password: data.password,
-      callbackURL: '/', // লগইন সফল হলে হোম পেজে যাবে
+      callbackURL: '/', 
     });
 
     if (error) {
