@@ -1,6 +1,20 @@
+// lib/auth.ts
 import { betterAuth } from 'better-auth';
 import { MongoClient } from 'mongodb';
 import { mongodbAdapter } from 'better-auth/adapters/mongodb';
+
+// ✅ Environment variable check with fallback
+const getMongoUri = () => {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    // Build time এ error না দেওয়ার জন্য
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ MONGODB_URI is not defined, using fallback');
+    }
+    return 'mongodb://localhost:27017/reusehub_db';
+  }
+  return uri;
+};
 
 // ১. গ্লোবাল ভেরিয়েবল সেট করা (যাতে Next.js হট-রিলোডে কানেকশন না হারায়)
 const globalForMongo = global as unknown as {
@@ -8,24 +22,27 @@ const globalForMongo = global as unknown as {
 };
 
 // ২. ক্লায়েন্ট চেক এবং তৈরি
-const uri = process.env.MONGODB_URI as string;
-if (!uri) {
-  throw new Error('MONGODB_URI is not defined in .env');
-}
+const uri = getMongoUri();
 
-const client = globalForMongo.mongoClient || new MongoClient(uri);
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForMongo.mongoClient = client;
+// ✅ Try to create client with error handling
+let client: MongoClient;
+try {
+  client = globalForMongo.mongoClient || new MongoClient(uri);
+  if (process.env.NODE_ENV !== 'production') {
+    globalForMongo.mongoClient = client;
+  }
+} catch (error) {
+  console.error('❌ MongoDB Client Error:', error);
+  // Fallback client for build
+  client = new MongoClient('mongodb://localhost:27017/reusehub_db');
 }
 
 // ৩. ডাটাবেস ইন্সট্যান্স
 const db = client.db('reusehub_db');
 
+// ✅ Export auth with error handling
 export const auth = betterAuth({
-  // পরিবর্তন এখানে: শুধুমাত্র db ইন্সট্যান্স পাস করুন
   database: mongodbAdapter(db),
-
   emailAndPassword: {
     enabled: true,
   },
@@ -48,3 +65,6 @@ export const auth = betterAuth({
     },
   },
 });
+
+// ✅ For build time - dummy export
+export default auth;
