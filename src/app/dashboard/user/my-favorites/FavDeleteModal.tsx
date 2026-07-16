@@ -57,7 +57,7 @@ const FavDeleteModal: React.FC<Props> = ({
                   onClick={onConfirm}
                   className="flex-1 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest bg-red-600 text-white shadow-lg shadow-red-500/30 cursor-pointer hover:bg-red-700 transition-all flex items-center justify-center gap-2"
                 >
-                  <Trash2 size={14} /> Remove Now
+                  <Trash2 size={14} /> Remove Now!
                 </button>
               </div>
             </div>
