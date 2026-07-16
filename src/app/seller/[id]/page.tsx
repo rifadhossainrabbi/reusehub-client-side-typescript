@@ -59,7 +59,7 @@ const SellerProductsPage = () => {
       <div className="h-screen flex flex-col items-center justify-center space-y-4 bg-white dark:bg-slate-950">
         <Loader2 className="animate-spin text-blue-600" size={48} />
         <p className="font-black uppercase tracking-[0.5em] text-blue-600 animate-pulse">
-          Loading Merchant Archive...
+          Loading Merchant Archive....
         </p>
       </div>
     );
