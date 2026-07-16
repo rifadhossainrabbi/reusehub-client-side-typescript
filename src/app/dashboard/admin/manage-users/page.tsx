@@ -11,13 +11,16 @@ import {
   Crown,
   RotateCcw,
   UserCheck,
+  User,
+  Eye,
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { authClient } from '@/lib/auth-client';
 import PromoteAdminModal from './PromoteAdminModal';
-import DeleteUserModal from './DeleteUsersModa'; // Ensure the file name is correct
+import DeleteUserModal from './DeleteUsersModa';
 import { useRouter } from 'next/navigation';
 import { deleteData, getData, patchData } from '@/lib/api';
+import Link from 'next/link';
 
 const ManageUsers = () => {
   // --- STATES ---
@@ -41,15 +44,9 @@ const ManageUsers = () => {
     }
   }, [session, isPending, router]);
 
-  /**
-   * Fetch users from sanctuary archives with pagination
-   */
-  /**
-   * Fetch users from sanctuary archives with pagination
-   */
   const fetchUsers = async (pageNum: number, showLoader = true) => {
     try {
-      if (showLoader) setLoading(true); // শুধু প্রথমবার লোডার দেখাবে
+      if (showLoader) setLoading(true);
 
       const data = await getData(`/api/admin/users?page=${pageNum}`);
       setUsers(data.users || []);
@@ -62,10 +59,9 @@ const ManageUsers = () => {
   };
 
   useEffect(() => {
-    fetchUsers(page, true); // প্রথমে লোডার দেখাবে
+    fetchUsers(page, true);
   }, [page]);
 
-  // Handle Role Toggle
   const handleToggleRole = async () => {
     if (!selectedUser) return;
     try {
@@ -76,14 +72,12 @@ const ManageUsers = () => {
 
       toast.success(data.message);
       setIsPromoteModalOpen(false);
-      fetchUsers(page, false); // সাইলেন্ট আপডেট
+      fetchUsers(page, false);
     } catch (err: any) {
-      // এখানে সার্ভারের পাঠানো আসল মেসেজটি দেখাবে
       toast.error(err.message || 'Role synchronization failed');
     }
   };
 
-  // Handle Account Purge
   const handlePurgeAccount = async () => {
     if (!selectedUser) return;
     try {
@@ -91,14 +85,12 @@ const ManageUsers = () => {
 
       toast.success(data.message);
       setIsDeleteModalOpen(false);
-
-      // ডিলিট করার পর লোডার ছাড়া ফেচ করবে (false পাঠানো হয়েছে)
       fetchUsers(page, false);
     } catch (err: any) {
       toast.error(err.message || 'Master purge protocol failed');
     }
   };
-  // Local filtering for search bar
+
   const filteredUsers = users.filter(
     u =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -180,27 +172,48 @@ const ManageUsers = () => {
                 >
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-5">
-                      {/* Dynamic Avatar (Image or First 2 Letters) */}
-                      <div
-                        className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-sm uppercase overflow-hidden border-2 ${user.admin === 'master' ? 'border-amber-500 bg-amber-600' : 'border-blue-500 bg-blue-600'}`}
+                      {/* ✅ Dynamic Avatar with Link to Profile */}
+                      <Link
+                        href={`/admin/profile/${user._id}`}
+                        className="shrink-0 group/avatar relative cursor-pointer"
                       >
-                        {user.image ? (
-                          <img
-                            src={user.image}
-                            className="w-full h-full object-cover"
-                            alt="avatar"
-                          />
-                        ) : (
-                          user.name.slice(0, 2).toUpperCase()
-                        )}
-                      </div>
+                        <div
+                          className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-sm uppercase overflow-hidden border-2 transition-all duration-300 group-hover/avatar:scale-105 group-hover/avatar:shadow-lg ${
+                            user.admin === 'master'
+                              ? 'border-amber-500 bg-amber-600'
+                              : 'border-blue-500 bg-blue-600'
+                          }`}
+                        >
+                          {user.image ? (
+                            <img
+                              src={user.image}
+                              className="w-full h-full object-cover"
+                              alt={user.name}
+                            />
+                          ) : (
+                            user.name.slice(0, 2).toUpperCase()
+                          )}
+                        </div>
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 rounded-2xl bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
+                          <Eye size={16} className="text-white" />
+                        </div>
+                      </Link>
+
+                      {/* ✅ User Name with Link */}
                       <div>
-                        <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter flex items-center gap-2">
-                          {user.name}{' '}
+                        <Link
+                          href={`/seller/${user._id}`}
+                          className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter flex items-center gap-2 hover:text-blue-600 transition-colors group/name"
+                        >
+                          {user.name}
                           {user.admin === 'master' && (
                             <Crown size={14} className="text-amber-500" />
                           )}
-                        </p>
+                          <span className="text-[8px] font-bold text-blue-600 opacity-0 group-hover/name:opacity-100 transition-opacity">
+                            View Profile →
+                          </span>
+                        </Link>
                         <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
                           <Mail size={12} /> {user.email}
                         </p>
@@ -209,7 +222,13 @@ const ManageUsers = () => {
                   </td>
                   <td className="px-6 py-6 text-center">
                     <span
-                      className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${user.admin === 'master' ? 'bg-amber-50 border-amber-200 text-amber-600' : user.role === 'admin' ? 'bg-purple-50 border-purple-200 text-purple-600' : 'bg-blue-50 border-blue-200 text-blue-600'}`}
+                      className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                        user.admin === 'master'
+                          ? 'bg-amber-50 border-amber-200 text-amber-600'
+                          : user.role === 'admin'
+                            ? 'bg-purple-50 border-purple-200 text-purple-600'
+                            : 'bg-blue-50 border-blue-200 text-blue-600'
+                      }`}
                     >
                       {user.admin === 'master'
                         ? 'Master Authority'
@@ -225,6 +244,15 @@ const ManageUsers = () => {
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex justify-end gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
+                      {/* ✅ View Profile Button */}
+                      <Link
+                        href={`/seller/${user._id}`}
+                        className="p-3 bg-slate-100 dark:bg-slate-800 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all cursor-pointer shadow-sm border border-transparent hover:border-blue-100"
+                        title="View Profile"
+                      >
+                        <User size={18} />
+                      </Link>
+
                       {user.admin !== 'master' ? (
                         <>
                           <button
@@ -232,7 +260,11 @@ const ManageUsers = () => {
                               setSelectedUser(user);
                               setIsPromoteModalOpen(true);
                             }}
-                            className={`p-3 rounded-xl transition-all cursor-pointer shadow-sm border ${user.role === 'admin' ? 'bg-blue-600 text-white border-blue-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-600 border-transparent'}`}
+                            className={`p-3 rounded-xl transition-all cursor-pointer shadow-sm border ${
+                              user.role === 'admin'
+                                ? 'bg-blue-600 text-white border-blue-400'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-600 border-transparent'
+                            }`}
                             title={
                               user.role === 'admin'
                                 ? 'Demote to User'

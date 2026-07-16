@@ -1,3 +1,4 @@
+// src/app/dashboard/user/my-favorites/page.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
@@ -7,7 +8,6 @@ import {
   Heart,
   Loader2,
   Calendar,
-  Tag,
   DollarSign,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -20,7 +20,6 @@ const MyFavoritePage = () => {
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const { data: session, isPending } = authClient.useSession();
@@ -35,11 +34,19 @@ const MyFavoritePage = () => {
   const fetchFavorites = async (isSilent = false) => {
     if (!session?.user?.id) return;
     try {
-      // যদি সাইলেন্ট না হয় তবেই ফুল স্ক্রিন লোডার দেখাবে
       if (!isSilent) setLoading(true);
 
       const data = await getData(`/api/favorites/${session.user.id}`);
-      setFavorites(data);
+      console.log('🔍 Favorite Data:', data);
+
+      // ✅ Store favorite document ID separately
+      const formattedFavorites = (data.products || []).map((fav: any) => ({
+        ...fav,
+        favoriteDocId: fav._id, // ← favorite document ID
+        productId: fav.productId || fav.id || fav._id,
+      }));
+
+      setFavorites(formattedFavorites);
     } catch (err: any) {
       toast.error(err.message || 'Wishlist sync failed');
     } finally {
@@ -56,18 +63,24 @@ const MyFavoritePage = () => {
     setIsModalOpen(true);
   };
 
+  // src/app/dashboard/user/my-favorites/page.tsx
+
   const handleConfirmDelete = async () => {
     if (!selectedItem) return;
     try {
-      // deleteData ব্যবহার করা হয়েছে
-      await deleteData(`/api/favorites/${selectedItem._id}`);
+      // ✅ Product ID ব্যবহার করুন
+      const productId =
+        selectedItem.productId || selectedItem.id || selectedItem._id;
+      console.log('🗑️ Removing favorite with Product ID:', productId);
+
+      // ✅ নতুন API ব্যবহার করুন
+      await deleteData(`/api/favorites/remove/${productId}`);
 
       toast.success('Artifact removed from wishlist');
       setIsModalOpen(false);
-
-      // ডিলিট করার পর সাইলেন্ট রিফ্রেশ (লোডার ছাড়া)
       fetchFavorites(true);
     } catch (err: any) {
+      console.error('Delete error:', err);
       toast.error(err.message || 'Removal protocol failed');
     }
   };
@@ -92,7 +105,6 @@ const MyFavoritePage = () => {
         itemName={selectedItem?.title || ''}
       />
 
-      {/* Header Section */}
       <header className="border-b dark:border-slate-800 pb-8">
         <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
           Saved Artifacts
@@ -120,7 +132,6 @@ const MyFavoritePage = () => {
         </div>
       ) : (
         <>
-          {/* --- 1. DESKTOP TABLE VIEW (Visible on LG screens and up) --- */}
           <div className="hidden lg:block bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -133,122 +144,127 @@ const MyFavoritePage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y dark:divide-slate-800">
-                  {favorites.map(fav => (
-                    <tr
-                      key={fav._id}
-                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
-                    >
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-5">
-                          <Link
-                            href={`/explore/${fav.productId}`}
-                            className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0 cursor-pointer border dark:border-slate-800"
-                          >
-                            <img
-                              src={fav.imageUrl}
-                              alt="p"
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-                          </Link>
-                          <div>
+                  {favorites.map((fav: any) => {
+                    const productId = fav.productId || fav.id || fav._id;
+                    return (
+                      <tr
+                        key={fav._id}
+                        className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
+                      >
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-5">
                             <Link
-                              href={`/explore/${fav.productId}`}
-                              className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter hover:text-blue-600 cursor-pointer transition-colors block mb-1"
+                              href={`/explore/${productId}`}
+                              className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0 cursor-pointer border dark:border-slate-800"
                             >
-                              {fav.title}
+                              <img
+                                src={fav.imageUrl}
+                                alt="p"
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                              />
                             </Link>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                              <Calendar size={10} />{' '}
-                              {new Date(fav.addedAt).toLocaleDateString()}
-                            </p>
+                            <div>
+                              <Link
+                                href={`/explore/${productId}`}
+                                className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter hover:text-blue-600 cursor-pointer transition-colors block mb-1"
+                              >
+                                {fav.title}
+                              </Link>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                                <Calendar size={10} />{' '}
+                                {new Date(fav.addedAt).toLocaleDateString()}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-6 text-center">
-                        <span className="inline-block px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30">
-                          {fav.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-6 text-center font-black text-slate-900 dark:text-white">
-                        ${fav.price.toLocaleString()}
-                      </td>
-                      <td className="px-8 py-6 text-right">
-                        <div className="flex justify-end gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
-                          <Link
-                            href={`/explore/${fav.productId}`}
-                            className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
-                          >
-                            <Eye size={18} />
-                          </Link>
-                          <button
-                            onClick={() => openDeleteModal(fav)}
-                            className="p-3 bg-slate-100 dark:bg-slate-800 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all cursor-pointer"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-6 py-6 text-center">
+                          <span className="inline-block px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30">
+                            {fav.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-6 text-center font-black text-slate-900 dark:text-white">
+                          ${fav.price?.toLocaleString() || fav.price}
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex justify-end gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
+                            <Link
+                              href={`/explore/${productId}`}
+                              className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-blue-600 hover:text-white transition-all cursor-pointer"
+                            >
+                              <Eye size={18} />
+                            </Link>
+                            <button
+                              onClick={() => openDeleteModal(fav)}
+                              className="p-3 bg-slate-100 dark:bg-slate-800 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all cursor-pointer"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* --- 2. MOBILE & TABLET CARD VIEW (Visible on screens below LG) --- */}
           <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-6">
-            {favorites.map(fav => (
-              <div
-                key={fav._id}
-                className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6"
-              >
-                <div className="flex items-center gap-4">
-                  <Link
-                    href={`/explore/${fav.productId}`}
-                    className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0"
-                  >
-                    <img
-                      src={fav.imageUrl}
-                      alt="p"
-                      className="w-full h-full object-cover"
-                    />
-                  </Link>
-                  <div className="overflow-hidden">
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">
-                      {fav.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase">
-                        {fav.category}
-                      </span>
-                      <span className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1">
-                        <DollarSign size={10} />
-                        {fav.price}
-                      </span>
+            {favorites.map((fav: any) => {
+              const productId = fav.productId || fav.id || fav._id;
+              return (
+                <div
+                  key={fav._id}
+                  className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6"
+                >
+                  <div className="flex items-center gap-4">
+                    <Link
+                      href={`/explore/${productId}`}
+                      className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 shrink-0"
+                    >
+                      <img
+                        src={fav.imageUrl}
+                        alt="p"
+                        className="w-full h-full object-cover"
+                      />
+                    </Link>
+                    <div className="overflow-hidden">
+                      <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">
+                        {fav.title}
+                      </h3>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <span className="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase">
+                          {fav.category}
+                        </span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1">
+                          <DollarSign size={10} />
+                          {fav.price}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex gap-3 pt-2 border-t dark:border-slate-800">
-                  <Link href={`/explore/${fav.productId}`} className="flex-1">
-                    <button className="w-full py-3 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
-                      <Eye size={14} /> View
+                  <div className="flex gap-3 pt-2 border-t dark:border-slate-800">
+                    <Link href={`/explore/${productId}`} className="flex-1">
+                      <button className="w-full py-3 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                        <Eye size={14} /> View
+                      </button>
+                    </Link>
+                    <button
+                      onClick={() => openDeleteModal(fav)}
+                      className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                    >
+                      <Trash2 size={14} /> Purge
                     </button>
-                  </Link>
-                  <button
-                    onClick={() => openDeleteModal(fav)}
-                    className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
-                  >
-                    <Trash2 size={14} /> Purge
-                  </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
     </div>
   );
-};
+};;
 
 export default MyFavoritePage;
